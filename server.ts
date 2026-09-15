@@ -65,18 +65,111 @@ async function fetchLiveDubaiPlaces(query: string): Promise<RealDubaiBusiness[]>
 }
 
 // Helper: Get businesses filtered by parameters
+interface FilterResult {
+  businesses: RealDubaiBusiness[];
+  totalMatched: number;
+  totalInDistrict: number;
+  totalInDistrictCategory: number;
+}
+
+// Helper: Get businesses filtered strictly by parameters
 function getFilteredRealBusinesses(
-  count: number = 20,
+  count: number | string = 20,
   district?: string,
   category?: string,
   reviewRange?: string,
   customQuery?: string
-): RealDubaiBusiness[] {
-  let filtered = [...REAL_DUBAI_BUSINESSES];
+): FilterResult {
+  const allBusinesses = [...REAL_DUBAI_BUSINESSES];
 
+  // 1. Filter by District / Target Area
+  let districtMatches = allBusinesses;
+  if (district && district !== "All Dubai") {
+    const cleanD = district.toLowerCase().replace(/\(.*?\)/g, "").replace(/metro/g, "").trim();
+    const dLower = cleanD.replace(/[^a-z0-9]/g, "");
+    const dTokens = cleanD.split(/[\s\/\-]+/).filter(t => t.length >= 3);
+
+    districtMatches = allBusinesses.filter(b => {
+      const bDistLower = b.district.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const bAddrLower = b.address.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      if (bDistLower.includes(dLower) || dLower.includes(bDistLower)) return true;
+      if (bAddrLower.includes(dLower)) return true;
+
+      const matchesToken = dTokens.some(token => {
+        const cleanToken = token.replace(/[^a-z0-9]/g, "");
+        if (cleanToken.length < 3) return false;
+        return bDistLower.includes(cleanToken) || bAddrLower.includes(cleanToken);
+      });
+      if (matchesToken) return true;
+
+      if ((cleanD.includes("dcc") || cleanD.includes("city centre")) && (bDistLower.includes("dcc") || bDistLower.includes("citycentre") || bAddrLower.includes("city centre"))) return true;
+      if (cleanD.includes("union") && (bDistLower.includes("union") || bAddrLower.includes("union"))) return true;
+      if ((cleanD.includes("salah") || cleanD.includes("aldin")) && (bDistLower.includes("salah") || bAddrLower.includes("salahuddin") || bAddrLower.includes("salah"))) return true;
+      if (cleanD.includes("burjuman") && (bDistLower.includes("burjuman") || bAddrLower.includes("burjuman"))) return true;
+      if (cleanD.includes("baniyas") && (bDistLower.includes("baniyas") || bAddrLower.includes("baniyas"))) return true;
+      if (cleanD.includes("fahidi") && (bDistLower.includes("fahidi") || bAddrLower.includes("fahidi") || bAddrLower.includes("meena bazaar"))) return true;
+      if ((cleanD.includes("karama") || cleanD.includes("adcb")) && (bDistLower.includes("karama") || bAddrLower.includes("karama") || bAddrLower.includes("adcb"))) return true;
+      if (cleanD.includes("rigga") && (bDistLower.includes("rigga") || bAddrLower.includes("rigga"))) return true;
+
+      return false;
+    });
+  }
+
+  const totalInDistrict = districtMatches.length;
+
+  // 2. Filter by Category strictly
+  let categoryMatches = districtMatches;
+  if (category && category !== "All Categories") {
+    const cLower = category.toLowerCase().trim();
+    categoryMatches = districtMatches.filter(b => {
+      const bCatLower = b.category.toLowerCase().trim();
+      const bNameLower = b.name.toLowerCase().trim();
+
+      if (bCatLower === cLower) return true;
+      if (bCatLower.includes(cLower) || cLower.includes(bCatLower)) return true;
+
+      if (cLower.includes("dental")) {
+        return bCatLower.includes("dental") || bNameLower.includes("dental") || bNameLower.includes("dentistry") || bNameLower.includes("teeth");
+      }
+      if (cLower.includes("restaurant") || cLower.includes("cafe")) {
+        return bCatLower.includes("restaurant") || bCatLower.includes("cafe") || bNameLower.includes("restaurant") || bNameLower.includes("cafe") || bNameLower.includes("bakery") || bNameLower.includes("grill") || bNameLower.includes("coffee") || bNameLower.includes("bistro");
+      }
+      if (cLower.includes("clinic") || cLower.includes("health")) {
+        return bCatLower.includes("clinic") || bCatLower.includes("health") || bCatLower.includes("medical") || bNameLower.includes("clinic") || bNameLower.includes("hospital") || bNameLower.includes("medical");
+      }
+      if (cLower.includes("salon") || cLower.includes("spa")) {
+        return bCatLower.includes("salon") || bCatLower.includes("spa") || bCatLower.includes("barber") || bNameLower.includes("salon") || bNameLower.includes("spa") || bNameLower.includes("barber") || bNameLower.includes("grooming");
+      }
+      if (cLower.includes("auto") || cLower.includes("repair")) {
+        return bCatLower.includes("auto") || bCatLower.includes("repair") || bCatLower.includes("automotive") || bNameLower.includes("auto") || bNameLower.includes("garage") || bNameLower.includes("motors");
+      }
+      if (cLower.includes("fitness") || cLower.includes("gym")) {
+        return bCatLower.includes("fitness") || bCatLower.includes("gym") || bNameLower.includes("gym") || bNameLower.includes("fitness");
+      }
+      return false;
+    });
+  }
+
+  const totalInDistrictCategory = categoryMatches.length;
+
+  // 3. Filter by Review Range strictly
+  let reviewMatches = categoryMatches;
+  if (reviewRange && reviewRange !== "all") {
+    if (reviewRange === "under_50") {
+      reviewMatches = categoryMatches.filter(b => b.reviewCount < 50);
+    } else if (reviewRange === "50_to_100") {
+      reviewMatches = categoryMatches.filter(b => b.reviewCount >= 50 && b.reviewCount <= 100);
+    } else if (reviewRange === "sweet_spot") {
+      reviewMatches = categoryMatches.filter(b => b.reviewCount >= 10 && b.reviewCount <= 120);
+    }
+  }
+
+  // 4. Custom Query Search
+  let finalMatches = reviewMatches;
   if (customQuery && customQuery.trim()) {
     const q = customQuery.toLowerCase().trim();
-    filtered = filtered.filter(b =>
+    finalMatches = reviewMatches.filter(b =>
       b.name.toLowerCase().includes(q) ||
       b.address.toLowerCase().includes(q) ||
       b.district.toLowerCase().includes(q) ||
@@ -85,52 +178,22 @@ function getFilteredRealBusinesses(
     );
   }
 
-  if (district && district !== "All Dubai") {
-    const dLower = district.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const districtMatches = filtered.filter(b => {
-      const bDistLower = b.district.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const bAddrLower = b.address.toLowerCase().replace(/[^a-z0-9]/g, "");
-      return (
-        bDistLower.includes(dLower) ||
-        dLower.includes(bDistLower) ||
-        bAddrLower.includes(dLower)
-      );
-    });
-    if (districtMatches.length > 0) {
-      filtered = districtMatches;
-    }
+  const totalMatched = finalMatches.length;
+
+  // 5. Slice according to count parameter
+  let limit = typeof count === "number" ? count : parseInt(String(count), 10);
+  if (isNaN(limit) || String(count).toLowerCase() === "all" || limit >= 999) {
+    limit = finalMatches.length;
   }
 
-  if (category && category !== "All Categories") {
-    const cLower = category.toLowerCase().trim();
-    const catMatches = filtered.filter(b => {
-      const bCatLower = b.category.toLowerCase().trim();
-      if (bCatLower === cLower) return true;
-      if (bCatLower.includes(cLower) || cLower.includes(bCatLower)) return true;
-      if (cLower.includes("dental") && (bCatLower.includes("dental") || b.name.toLowerCase().includes("dental"))) {
-        return true;
-      }
-      return false;
-    });
-    if (catMatches.length > 0) {
-      filtered = catMatches;
-    }
-  }
+  const sliced = finalMatches.slice(0, Math.max(limit, 0));
 
-  if (reviewRange) {
-    if (reviewRange === "under_50") {
-      const sub = filtered.filter(b => b.reviewCount < 50);
-      if (sub.length > 0) filtered = sub;
-    } else if (reviewRange === "50_to_100") {
-      const sub = filtered.filter(b => b.reviewCount >= 50 && b.reviewCount <= 100);
-      if (sub.length > 0) filtered = sub;
-    } else if (reviewRange === "sweet_spot") {
-      const sub = filtered.filter(b => b.reviewCount >= 10 && b.reviewCount <= 120);
-      if (sub.length > 0) filtered = sub;
-    }
-  }
-
-  return filtered.slice(0, Math.max(count, 10));
+  return {
+    businesses: sliced,
+    totalMatched,
+    totalInDistrict,
+    totalInDistrictCategory,
+  };
 }
 
 // Health check endpoint for monitoring & Vercel
@@ -144,14 +207,13 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
     const { district, category, reviewRange, count = 20, customQuery } = req.body;
 
     // 1. Get filtered verified real businesses from the comprehensive Dubai registry
-    let results: RealDubaiBusiness[] = getFilteredRealBusinesses(count, district, category, reviewRange, customQuery);
+    const searchResult = getFilteredRealBusinesses(count, district, category, reviewRange, customQuery);
+    let results = searchResult.businesses;
 
-    // 2. If a custom query is provided (e.g. user typed a specific restaurant, cafe, salon or address)
-    // and local matches are few, fetch live real-world places from Dubai geocoder
+    // 2. If a custom query is provided and local matches are few, fetch live real-world places
     if (customQuery && customQuery.trim().length >= 2 && results.length < 5) {
       const livePlaces = await fetchLiveDubaiPlaces(customQuery.trim());
       if (livePlaces.length > 0) {
-        // Merge without duplicate names
         const existingNames = new Set(results.map(r => r.name.toLowerCase()));
         for (const lp of livePlaces) {
           if (!existingNames.has(lp.name.toLowerCase())) {
@@ -166,15 +228,21 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
       success: true,
       source: "real_verified_dubai_places",
       count: results.length,
+      totalMatched: searchResult.totalMatched,
+      totalInDistrict: searchResult.totalInDistrict,
+      totalInDistrictCategory: searchResult.totalInDistrictCategory,
       businesses: results,
     });
   } catch (_err) {
-    const fallbackList = getFilteredRealBusinesses(20, "All Dubai", "All Categories", "sweet_spot");
+    const fallbackResult = getFilteredRealBusinesses(20, "All Dubai", "All Categories", "sweet_spot");
     return res.json({
       success: true,
       source: "real_verified_dubai_places",
-      count: fallbackList.length,
-      businesses: fallbackList,
+      count: fallbackResult.businesses.length,
+      totalMatched: fallbackResult.totalMatched,
+      totalInDistrict: fallbackResult.totalInDistrict,
+      totalInDistrictCategory: fallbackResult.totalInDistrictCategory,
+      businesses: fallbackResult.businesses,
     });
   }
 });

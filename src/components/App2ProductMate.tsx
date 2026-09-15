@@ -217,6 +217,25 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
           </div>
         )}
 
+        {/* GMB Everywhere Audit Strip */}
+        {initialLead?.audit && (
+          <div className="mt-2.5 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <span className="text-amber-400 font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>GMB Everywhere™ Audit:</span>
+              <span className="text-white bg-slate-850 px-1.5 py-0.5 rounded border border-slate-700 font-bold">
+                {initialLead.audit.auditScore}/100
+              </span>
+            </span>
+            <div className="flex flex-wrap items-center gap-3 text-[11px]">
+              <span className="text-slate-300">Category: <strong className="text-cyan-300">{initialLead.audit.categoryMatchScore}%</strong></span>
+              <span className="text-slate-300">Completeness: <strong className="text-emerald-400">{initialLead.audit.profileCompleteness}%</strong></span>
+              <span className="text-slate-300">Velocity: <strong className="text-amber-300">{initialLead.audit.reviewVelocity.split(' ')[0]}/mo</strong></span>
+              <span className="text-slate-300">Photos: <strong className="text-purple-300">{initialLead.audit.photosCount}</strong></span>
+            </div>
+          </div>
+        )}
+
         {/* Mode Toggle: Google Review vs Instagram NFC */}
         <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center gap-2">
           <button
