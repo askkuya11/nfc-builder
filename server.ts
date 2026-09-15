@@ -43,10 +43,10 @@ async function fetchLiveDubaiPlaces(query: string): Promise<RealDubaiBusiness[]>
       return {
         id: `dxb-live-${Date.now()}-${index}`,
         name,
-        category: "Restaurants & Cafes" as const,
+        category: (name.toLowerCase().includes("dental") || address.toLowerCase().includes("dental")) ? ("Dental Clinic" as const) : ("Restaurants & Cafes" as const),
         rating: 4.5,
         reviewCount: Math.floor(25 + (Math.random() * 85)),
-        district: address.includes("Marina") ? "Dubai Marina" : address.includes("Downtown") ? "Downtown Dubai" : address.includes("Deira") ? "Deira" : "Dubai",
+        district: address.toLowerCase().includes("rigga") ? "Al Rigga" : address.includes("Marina") ? "Dubai Marina" : address.includes("Downtown") ? "Downtown Dubai" : address.includes("Deira") ? "Deira" : "Dubai",
         address,
         phone: "+971 4 300 0000",
         mapsUrl: cleanMapsUrl,
@@ -86,19 +86,32 @@ function getFilteredRealBusinesses(
   }
 
   if (district && district !== "All Dubai") {
-    const dLower = district.toLowerCase();
-    const districtMatches = filtered.filter(b =>
-      b.district.toLowerCase().includes(dLower) ||
-      dLower.includes(b.district.toLowerCase()) ||
-      b.address.toLowerCase().includes(dLower)
-    );
+    const dLower = district.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const districtMatches = filtered.filter(b => {
+      const bDistLower = b.district.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const bAddrLower = b.address.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return (
+        bDistLower.includes(dLower) ||
+        dLower.includes(bDistLower) ||
+        bAddrLower.includes(dLower)
+      );
+    });
     if (districtMatches.length > 0) {
       filtered = districtMatches;
     }
   }
 
   if (category && category !== "All Categories") {
-    const catMatches = filtered.filter(b => b.category.toLowerCase() === category.toLowerCase());
+    const cLower = category.toLowerCase().trim();
+    const catMatches = filtered.filter(b => {
+      const bCatLower = b.category.toLowerCase().trim();
+      if (bCatLower === cLower) return true;
+      if (bCatLower.includes(cLower) || cLower.includes(bCatLower)) return true;
+      if (cLower.includes("dental") && (bCatLower.includes("dental") || b.name.toLowerCase().includes("dental"))) {
+        return true;
+      }
+      return false;
+    });
     if (catMatches.length > 0) {
       filtered = catMatches;
     }

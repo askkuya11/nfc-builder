@@ -26,6 +26,7 @@ interface App1MapScoutProps {
 
 const DUBAI_DISTRICTS = [
   'All Dubai',
+  'Al Rigga',
   'Dubai Marina',
   'Downtown Dubai',
   'Business Bay',
@@ -40,6 +41,7 @@ const DUBAI_DISTRICTS = [
 
 const CATEGORIES = [
   'All Categories',
+  'Dental Clinic',
   'Restaurants & Cafes',
   'Salons & Spas',
   'Clinics & Healthcare',
