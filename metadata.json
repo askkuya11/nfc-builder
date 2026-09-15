@@ -1,0 +1,6 @@
+{
+  "name": "NFC BizSuite Dubai",
+  "description": "Mobile-first 3-in-1 enterprise suite for Google Review & Instagram NFC card sales in Dubai: Map Business Scout, Product Mate Review Link Generator, and NFC Card Writer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
