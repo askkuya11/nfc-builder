@@ -107,7 +107,7 @@ export default function App() {
         />
 
         {/* Dynamic App Body View */}
-        <main className="flex-1 p-3 sm:p-5">
+        <main className="flex-1 p-3 sm:p-5 pb-24 sm:pb-16">
           {activeTab === 'scout' && (
             <App1MapScout
               onSelectLead={handleSelectLead}
