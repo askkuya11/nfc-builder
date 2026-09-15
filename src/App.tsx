@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { AppHeader } from './components/AppHeader';
 import { App1MapScout } from './components/App1MapScout';
 import { App2ProductMate } from './components/App2ProductMate';
@@ -43,6 +44,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+      <SpeedInsights />
       {/* Top Device Viewport Switcher for Desktop Testing */}
       <div className="hidden lg:flex items-center justify-between px-6 py-1.5 bg-slate-900/90 border-b border-slate-800 text-xs text-slate-400">
         <div className="flex items-center gap-2">
