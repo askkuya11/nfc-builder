@@ -107,7 +107,7 @@ export default function App() {
         />
 
         {/* Dynamic App Body View */}
-        <main className="flex-1 p-3 sm:p-5 pb-24 sm:pb-16">
+        <main className="flex-1 p-2 sm:p-4 pb-20 sm:pb-8">
           {activeTab === 'scout' && (
             <App1MapScout
               onSelectLead={handleSelectLead}
@@ -132,7 +132,7 @@ export default function App() {
         </main>
 
         {/* Mobile Sticky Bottom Floating Navigation Dock */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-3 max-w-6xl mx-auto flex items-center justify-around select-none shadow-2xl">
+        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-3 flex items-center justify-around select-none shadow-2xl">
           <button
             id="nav-dock-scout"
             onClick={() => setActiveTab('scout')}
@@ -158,12 +158,17 @@ export default function App() {
           <button
             id="nav-dock-nfc"
             onClick={() => setActiveTab('nfc')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 ${
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 relative ${
               activeTab === 'nfc' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Radio className="w-5 h-5" />
             <span className="text-[10px] tracking-tight">3. NFC Tool</span>
+            {writtenCount > 0 && (
+              <span className="absolute top-0.5 right-2 w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[9px] flex items-center justify-center">
+                {writtenCount}
+              </span>
+            )}
           </button>
         </nav>
       </div>

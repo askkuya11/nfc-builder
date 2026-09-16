@@ -533,257 +533,58 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 pb-20">
-      {/* App Intro & Value Banner */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-amber-950/30 border border-slate-700/70 rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-1.5">
-              <Flame className="w-3.5 h-3.5" /> App 1 of 3: Dubai Lead Scout
+    <div className="flex flex-col gap-3 pb-16">
+      {/* Mobile-First Compact Scout Control Center */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl">
+        {/* Top Header Row with Actions */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Compass className="w-4 h-4" />
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-              Google Maps Business Finder
-            </h2>
-            <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-              Find Dubai shops with <strong className="text-amber-400 font-semibold">0 to 100 reviews</strong>. These owners understand reviews drive foot-traffic, but are falling behind competitors. They are your highest-converting prospects for Google Review NFC cards.
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-xs sm:text-sm font-bold text-white tracking-tight">
+                  Google Maps Scout
+                </h2>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 shrink-0">
+                  🎯 0-100 Reviews
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 truncate hidden xs:block">
+                High-converting Dubai prospects for Google Review NFC cards
+              </p>
+            </div>
           </div>
 
-          <div className="flex-shrink-0 flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => setIsImporterOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/10 transition"
-              title="Import or paste CSV/JSON exported from GMB Everywhere Chrome extension"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-[11px] shadow-sm transition"
+              title="Import GMB Everywhere CSV/JSON"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Import GMB Everywhere</span>
+              <span className="hidden sm:inline">Import GMB</span>
             </button>
 
             <button
               type="button"
               onClick={exportCsv}
               disabled={leads.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs text-slate-200 font-medium transition disabled:opacity-50"
-              title="Export CSV to take on field sales visits"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-medium transition disabled:opacity-50"
+              title="Export CSV list"
             >
               <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden xs:inline">Export CSV</span>
+              <span className="hidden sm:inline">Export</span>
             </button>
           </div>
         </div>
 
-        {/* Mobile-First View Switcher & Filter Toggle Header */}
-        <div className="mt-3 pt-3 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-2.5">
-          {/* Quick View Mode Switcher */}
-          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-700/80 shadow-md">
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                viewMode === 'list'
-                  ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>List View</span>
-              {leads.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${viewMode === 'list' ? 'bg-slate-950 text-amber-400' : 'bg-slate-800 text-slate-300'}`}>
-                  {filteredLeads.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('map')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                viewMode === 'map'
-                  ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Map className="w-3.5 h-3.5" />
-              <span>Radar Map</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('split')}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                viewMode === 'split'
-                  ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-              title="View Radar Map and List View side by side"
-            >
-              <Columns className="w-3.5 h-3.5" />
-              <span>Split View</span>
-            </button>
-          </div>
-
-          {/* Collapsible Filters Toggle for Mobile */}
-          <button
-            type="button"
-            onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-          >
-            <Filter className="w-3.5 h-3.5 text-amber-400" />
-            <span>Filters: <strong className="text-white">{district.split('(')[0].trim()}</strong></span>
-            {filtersCollapsed ? (
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            ) : (
-              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-            )}
-          </button>
-        </div>
-
-        {/* Filter Controls Box (Collapsible on Mobile) */}
-        {!filtersCollapsed && (
-          <div className="mt-3 pt-3 border-t border-slate-700/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 animate-fadeIn">
-          {/* District Selector */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Target Area in Dubai
-            </label>
-            <div className="relative">
-              <select
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 appearance-none font-medium"
-              >
-                <optgroup label="🚇 DUBAI METRO STATIONS (RED & GREEN LINE)">
-                  {DUBAI_METRO_STATIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="🏙️ GENERAL DUBAI COMMERCIAL DISTRICTS">
-                  {DUBAI_GENERAL_DISTRICTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-              <MapPin className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Category Selector */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Business Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-medium"
-            >
-              <option value="All Categories">🌐 All Categories</option>
-              <option value="Men's Barbershops & Gents Salons">✂️ Men's Barbershops & Gents Salons</option>
-              <option value="Dental Clinic">🦷 Dental Clinics</option>
-              <option value="Restaurants & Cafes">🍽️ Restaurants & Cafes</option>
-              <option value="Ladies Salons & Spas">✨ Ladies Salons & Spas</option>
-              <option value="Clinics & Healthcare">💊 Clinics & Healthcare</option>
-              <option value="Retail & Boutiques">🛍️ Retail & Boutiques</option>
-              <option value="Automotive">🚗 Automotive & Garages</option>
-              <option value="Fitness & Gyms">🏋️ Fitness & Gyms</option>
-            </select>
-          </div>
-
-          {/* Review Volume Filter */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Existing Review Count
-            </label>
-            <select
-              value={reviewFilter}
-              onChange={(e) => setReviewFilter(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-amber-300 focus:outline-none focus:border-amber-500 font-medium"
-            >
-              <option value="sweet_spot">🎯 0 to 100 Reviews (Sweet Spot)</option>
-              <option value="0_to_20">🚨 0 to 20 Reviews (Low Count / Urgent Need)</option>
-              <option value="0_to_50">🔥 0 to 50 Reviews (High Need)</option>
-              <option value="20_to_50">⭐ 20 to 50 Reviews (Moderate Need)</option>
-              <option value="50_to_100">📈 50 to 100 Reviews (Established)</option>
-              <option value="all">🌐 Any Review Count (Show All)</option>
-            </select>
-          </div>
-
-          {/* Sort Order Selector */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Proximity & Sort Order
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-400 focus:outline-none focus:border-amber-500 font-medium"
-            >
-              <option value="nearest">📍 Nearest First (Proximity to Metro)</option>
-              <option value="sweet_spot">🎯 Sweet Spot (0-100 Reviews)</option>
-              <option value="reviews_asc">🔥 Lowest Reviews First</option>
-              <option value="rating_desc">⭐ Highest Rating First</option>
-              <option value="name_asc">🔤 Alphabetical (A-Z)</option>
-            </select>
-          </div>
-
-          {/* Target Count Extraction: 20, 50, or ALL */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Extract Quantity
-              </label>
-              <span className="text-[10px] font-bold text-amber-400">
-                {totalInDistrictCategory > 0 ? `${totalInDistrictCategory} Total in Area` : ''}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setExtractCount(20)}
-                className={`py-1.5 px-1.5 rounded-lg text-xs font-bold transition border ${
-                  extractCount === 20
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
-                }`}
-              >
-                20 Leads
-              </button>
-              <button
-                type="button"
-                onClick={() => setExtractCount(50)}
-                className={`py-1.5 px-1.5 rounded-lg text-xs font-bold transition border ${
-                  extractCount === 50
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-white'
-                }`}
-              >
-                50 Leads
-              </button>
-              <button
-                type="button"
-                onClick={() => setExtractCount(999)}
-                className={`py-1.5 px-1.5 rounded-lg text-xs font-bold transition border ${
-                  extractCount >= 999
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
-                    : 'bg-slate-950 text-amber-400 border-amber-500/40 hover:bg-amber-500/10'
-                }`}
-              >
-                ALL ({totalMatched})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-        {/* Live Search Input Bar & Search Button */}
-        <div className="mt-3 flex flex-col sm:flex-row items-stretch gap-2">
+        {/* Unified Search Input Bar */}
+        <div className="flex items-stretch gap-1.5 mb-2.5">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-amber-400 absolute left-3 top-3 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-amber-400 absolute left-3 top-2.5 pointer-events-none" />
             <input
               type="text"
               value={customSearch}
@@ -797,8 +598,8 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
                   fetchBusinesses();
                 }
               }}
-              placeholder="🔎 Search shop name or keyword (e.g. 'urban', 'blade', 'salon', 'barber', 'exit 1')..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-9 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 font-medium"
+              placeholder="Search shop, barber, salon, clinic, metro..."
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 font-medium"
             />
             {customSearch && (
               <button
@@ -807,8 +608,8 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
                   setCustomSearch('');
                   setResultSearchQuery('');
                 }}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white text-xs font-bold bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded"
-                title="Clear search query"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs font-bold"
+                title="Clear search"
               >
                 ✕
               </button>
@@ -819,85 +620,192 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
             type="button"
             onClick={() => fetchBusinesses()}
             disabled={loading}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/20 disabled:opacity-50 whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/15 disabled:opacity-50 shrink-0"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>
-              {loading
-                ? 'Scanning Google Maps...'
-                : customSearch.trim()
-                ? `Search "${customSearch.trim()}" in ${district}`
-                : extractCount >= 999
-                ? `Extract ALL ${totalMatched} in ${district}`
-                : `Extract ${extractCount} Businesses`}
-            </span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden xs:inline">{loading ? 'Scanning...' : 'Extract'}</span>
           </button>
         </div>
 
-        {/* Auto-detect & Capture Summary Badge */}
-        <div className="mt-2.5 px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
-              Target Area Auto-Detect
-            </span>
-            <span className="text-slate-300 font-medium">
-              Actual Total in <strong className="text-white">{district}</strong>: <strong className="text-amber-400 font-bold">{totalInDistrictCategory}</strong> {category !== 'All Categories' ? category : 'businesses'} detected {totalInDistrict > 0 && totalInDistrict !== totalInDistrictCategory ? `(${totalInDistrict} total across all categories)` : ''}
-            </span>
-          </div>
-          <span className="text-[11px] text-slate-400">
-            Captured <strong className="text-emerald-400 font-bold">{leads.length}</strong> of <strong className="text-amber-300 font-bold">{totalMatched}</strong> matching targets
-          </span>
+        {/* Category Fast Horizontal Scroll Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin mb-2.5 select-none">
+          {[
+            { label: '🌐 All', value: 'All Categories' },
+            { label: '✂️ Barbers', value: "Men's Barbershops & Gents Salons" },
+            { label: '🦷 Dental', value: 'Dental Clinic' },
+            { label: '🍽️ Dining', value: 'Restaurants & Cafes' },
+            { label: '✨ Salons', value: 'Ladies Salons & Spas' },
+            { label: '💊 Clinics', value: 'Clinics & Healthcare' },
+            { label: '🚗 Auto', value: 'Automotive' },
+            { label: '🏋️ Gyms', value: 'Fitness & Gyms' },
+            { label: '🛍️ Retail', value: 'Retail & Boutiques' },
+          ].map((cat) => {
+            const isSelected = category === cat.value;
+            return (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => {
+                  setCategory(cat.value);
+                  fetchBusinesses(district, cat.value);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition shrink-0 ${
+                  isSelected
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                    : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Barbershop Exhaustive Extraction Callout */}
-        {category === "Men's Barbershops & Gents Salons" && (
-          <div className="mt-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between gap-2 text-xs text-amber-300 font-semibold">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 animate-pulse" />
-              <span>
-                <strong>Exhaustive Barbershop & Gents Salon Extraction Active</strong>: Live Google Maps geocoder & Dubai commercial directory synced for <strong className="text-white">{district}</strong>. Every barbershop extracted.
-              </span>
-            </div>
-            <span className="px-2 py-0.5 bg-amber-500 text-slate-950 rounded text-[10px] font-extrabold uppercase">
-              100% Coverage
-            </span>
+        {/* Secondary Filter & District Selection Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800">
+          {/* Target District Selector */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Target Area / Metro
+            </label>
+            <select
+              value={district}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDistrict(val);
+                fetchBusinesses(val, category);
+              }}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-medium truncate"
+            >
+              <optgroup label="🚇 DUBAI METRO STATIONS">
+                {DUBAI_METRO_STATIONS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🏙️ GENERAL COMMERCIAL DISTRICTS">
+                {DUBAI_GENERAL_DISTRICTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
           </div>
-        )}
+
+          {/* Review Filter */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Review Volume
+            </label>
+            <select
+              value={reviewFilter}
+              onChange={(e) => setReviewFilter(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 focus:outline-none focus:border-amber-500 font-medium truncate"
+            >
+              <option value="sweet_spot">🎯 0-100 Reviews</option>
+              <option value="0_to_20">🚨 0-20 Reviews</option>
+              <option value="0_to_50">🔥 0-50 Reviews</option>
+              <option value="20_to_50">⭐ 20-50 Reviews</option>
+              <option value="all">🌐 Any Reviews</option>
+            </select>
+          </div>
+
+          {/* Sort By Proximity */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Sort Order
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 focus:outline-none focus:border-amber-500 font-medium truncate"
+            >
+              <option value="nearest">📍 Nearest (Metro)</option>
+              <option value="sweet_spot">🎯 Sweet Spot</option>
+              <option value="reviews_asc">🔥 Lowest Reviews</option>
+              <option value="rating_desc">⭐ Highest Rating</option>
+              <option value="name_asc">🔤 A-Z</option>
+            </select>
+          </div>
+
+          {/* Extract Count */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Extract Batch
+            </label>
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                onClick={() => setExtractCount(20)}
+                className={`py-1 rounded text-[11px] font-bold transition border ${
+                  extractCount === 20
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                    : 'bg-slate-950 text-slate-400 border-slate-700'
+                }`}
+              >
+                20
+              </button>
+              <button
+                type="button"
+                onClick={() => setExtractCount(50)}
+                className={`py-1 rounded text-[11px] font-bold transition border ${
+                  extractCount === 50
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                    : 'bg-slate-950 text-slate-400 border-slate-700'
+                }`}
+              >
+                50
+              </button>
+              <button
+                type="button"
+                onClick={() => setExtractCount(999)}
+                className={`py-1 rounded text-[11px] font-bold transition border ${
+                  extractCount >= 999
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                    : 'bg-slate-950 text-amber-400 border-amber-500/40'
+                }`}
+              >
+                ALL
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Result Count and View Switcher Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Result Stats & View Switcher Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-slate-200">
-            Showing <span className="text-amber-400 font-bold">{filteredLeads.length}</span> of <span className="text-amber-300 font-bold">{totalMatched}</span> verified {category !== 'All Categories' ? category : 'venues'} in {district}
+            <span className="text-amber-400 font-bold">{filteredLeads.length}</span> leads in <span className="text-white font-semibold">{district.split('(')[0].trim()}</span>
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-emerald-950/80 text-emerald-300 border-emerald-800/60 flex items-center gap-1">
-            ✓ 100% Real Places
+          <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+            ✓ Verified Places
           </span>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          {/* GMB Everywhere Audit Overlay Toggle */}
+        <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
+          {/* GMB Everywhere Audit Toggle */}
           <button
             type="button"
             onClick={() => setAuditOverlayEnabled(!auditOverlayEnabled)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition shrink-0 ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition shrink-0 ${
               auditOverlayEnabled
-                ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-sm'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
             }`}
-            title="Toggle GMB Everywhere audit overlay on cards"
           >
             <Gauge className="w-3.5 h-3.5 text-amber-400" />
             <span>Audit: {auditOverlayEnabled ? 'ON' : 'OFF'}</span>
           </button>
 
           {/* View Mode Segment Switcher */}
-          <div className="flex flex-1 sm:flex-initial items-center bg-slate-900 border border-slate-800 rounded-lg p-1 text-xs shadow-md">
+          <div className="flex flex-1 sm:flex-initial items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs shadow-md">
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-semibold text-xs transition ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-md font-semibold text-xs transition ${
                 viewMode === 'list'
                   ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -909,7 +817,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('map')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-semibold text-xs transition ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-md font-semibold text-xs transition ${
                 viewMode === 'map'
                   ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:text-white'
