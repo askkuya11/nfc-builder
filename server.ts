@@ -764,86 +764,145 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
   }
 });
 
+// Helper to convert Google Maps 64-bit Hex Feature ID pair (0x...:0x...) to official Place ID (ChIJ...)
+function hexPairToPlaceId(hex1: string, hex2: string): string {
+  try {
+    const val1 = BigInt(hex1.trim());
+    const val2 = BigInt(hex2.trim());
+
+    const buf = Buffer.alloc(20);
+    buf[0] = 0x0a;
+    buf[1] = 0x12;
+    buf[2] = 0x09;
+    buf.writeBigUInt64LE(val1, 3);
+    buf[11] = 0x11;
+    buf.writeBigUInt64LE(val2, 12);
+
+    return buf
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+  } catch {
+    return "";
+  }
+}
+
+// Internal Place ID validator: real, non-null string with length > 10
+function isValidPlaceId(placeId: unknown): placeId is string {
+  return (
+    typeof placeId === "string" &&
+    placeId.trim().length > 10 &&
+    !placeId.includes("undefined") &&
+    !placeId.includes("null") &&
+    !placeId.startsWith("dxb-real-") &&
+    !placeId.startsWith("gis-") &&
+    !placeId.startsWith("osm-node-") &&
+    !placeId.startsWith("dxb-live-")
+  );
+}
+
 // API: Extract & Convert Google Map link or Business Name to Direct Review URL (Product Mate)
+// ZERO-BILLING, ZERO-API-KEY: Uses underlying Google Maps URL / Feature IDs directly
 app.post(["/api/extract-review-link", "/extract-review-link"], async (req, res) => {
   try {
     const { url, businessName, placeId: providedPlaceId, district } = req.body;
+    let mapsUrl = (url || "").trim();
 
-    let targetUrl = (url || "").trim();
-    let extractedName = (businessName || "").trim();
-    let placeId = (providedPlaceId || "").trim();
-
-    // 1. If it's a short URL (maps.app.goo.gl or goo.gl/maps), resolve the redirect
-    if (targetUrl.includes("maps.app.goo.gl") || targetUrl.includes("goo.gl/maps") || targetUrl.includes("bit.ly")) {
+    // STEP 1 — RESOLVE SHORT URL REDIRECT (e.g. maps.app.goo.gl)
+    let resolvedUrl = mapsUrl;
+    if (mapsUrl.includes("maps.app.goo.gl") || mapsUrl.includes("goo.gl/maps") || mapsUrl.includes("bit.ly")) {
       try {
-        const response = await fetch(targetUrl, {
-          method: "HEAD",
-          redirect: "follow",
-          headers: { "User-Agent": "Mozilla/5.0" },
+        const response = await fetch(mapsUrl, {
+          method: "GET",
+          redirect: "manual",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+          },
         });
-        if (response.url) {
-          targetUrl = response.url;
+        const location = response.headers.get("location");
+        if (location) {
+          resolvedUrl = location;
+        } else if (response.url && response.url !== mapsUrl) {
+          resolvedUrl = response.url;
         }
       } catch {
-        // Continue with original url if redirect fetch was blocked
+        // Keep mapsUrl if redirect fetch fails
       }
     }
 
-    // 2. Extract business name from URL path or query params if not provided
-    if (!extractedName && targetUrl) {
-      const placeMatch = targetUrl.match(/\/maps\/place\/([^/@?]+)/);
-      if (placeMatch) {
-        extractedName = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
-      } else {
-        const qMatch = targetUrl.match(/[?&]q=([^&]+)/);
-        if (qMatch) {
-          extractedName = decodeURIComponent(qMatch[1].replace(/\+/g, " "));
+    // STEP 2 — EXTRACT BUSINESS NAME & LOCATION
+    let extractedName = (businessName || "").trim();
+    if (resolvedUrl) {
+      if (!extractedName) {
+        const placeMatch = resolvedUrl.match(/\/maps\/place\/([^/@?]+)/);
+        if (placeMatch) {
+          extractedName = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
+        } else {
+          const qMatch = resolvedUrl.match(/[?&]q=([^&]+)/);
+          if (qMatch) {
+            extractedName = decodeURIComponent(qMatch[1].replace(/\+/g, " "));
+          }
         }
       }
     }
 
-    // 3. Extract Place ID from URL if present
-    if (!placeId && targetUrl) {
-      const pMatch = targetUrl.match(/[?&]place_id=([a-zA-Z0-9_-]+)/);
-      if (pMatch) {
-        placeId = pMatch[1];
-      } else {
-        const chijMatch = targetUrl.match(/(ChIJ[a-zA-Z0-9_-]{20,})/);
-        if (chijMatch) {
-          placeId = chijMatch[1];
+    // STEP 3 — IDENTIFY REAL GOOGLE PLACE ID OR HEX FEATURE PAIR
+    let finalPlaceId = "";
+
+    // 1. Check if provided placeId is already a valid full Place ID
+    if (isValidPlaceId(providedPlaceId)) {
+      finalPlaceId = providedPlaceId;
+    }
+
+    // 2. Check if Place ID exists in resolved URL
+    if (!finalPlaceId && resolvedUrl) {
+      const pMatch = resolvedUrl.match(/[?&]place_id=([a-zA-Z0-9_-]+)/) || resolvedUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
+      if (pMatch && isValidPlaceId(pMatch[1])) {
+        finalPlaceId = pMatch[1];
+      }
+    }
+
+    // 3. Extract Google Maps 64-bit Hex Feature ID pair (!1s0x...:0x...) and convert to exact Place ID
+    if (!finalPlaceId && resolvedUrl) {
+      const hexMatch = resolvedUrl.match(/!1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) || resolvedUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+      if (hexMatch) {
+        const calculatedPid = hexPairToPlaceId(hexMatch[1], hexMatch[2]);
+        if (isValidPlaceId(calculatedPid)) {
+          finalPlaceId = calculatedPid;
         }
       }
     }
 
-    // If still no name, default to sensible label
-    if (!extractedName) {
-      extractedName = "Dubai Business";
+    // STEP 4 — CONSTRUCT DIRECT REVIEW URL
+    // RULE: NEVER output a Google search URL as a review URL. Only output when verified Place ID exists.
+    let reviewUrl = "";
+    if (isValidPlaceId(finalPlaceId)) {
+      reviewUrl = `https://search.google.com/local/writereview?placeid=${finalPlaceId}`;
     }
 
-    // 4. Construct verified URLs
-    // Clean official Google Maps Search URL (100% reliable on all phones, opens exact real place)
-    const cleanMapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${extractedName} ${district || "Dubai"}`)}`;
-
-    // Direct Review URL: If a valid real placeId is detected (>=25 chars), write review modal opens
-    let directReviewUrl = "";
-    if (placeId && placeId.startsWith("ChIJ") && placeId.length >= 25 && !placeId.includes("_")) {
-      directReviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
-    } else {
-      // Official Google Maps URL that immediately triggers the business card & review option
-      directReviewUrl = cleanMapsSearchUrl;
-    }
+    console.log(
+      `[Map Scout → Product Mate Flow]\n` +
+      `• Map Scout input: "${extractedName || businessName || 'N/A'}"\n` +
+      `• Extracted Google Maps URL: "${resolvedUrl || mapsUrl || 'N/A'}"\n` +
+      `• Detected Place ID (if available): "${finalPlaceId || 'None'}"\n` +
+      `• Product Mate input: { businessName: "${extractedName || businessName}", googleMapsUrl: "${resolvedUrl || mapsUrl}", placeId: "${finalPlaceId || ''}" }\n` +
+      `• Final review URL: "${reviewUrl || 'None (Verified Place ID not available)'}"`
+    );
 
     return res.json({
       success: true,
-      placeId: placeId || undefined,
-      businessName: extractedName,
-      directReviewUrl,
-      cleanMapsSearchUrl,
-      resolvedUrl: targetUrl || cleanMapsSearchUrl,
-      instructions: "When customers tap the NFC card programmed with this direct link, their phone directly opens this exact business card in Google Maps with instant 1-tap review access."
+      businessName: extractedName || businessName || "Dubai Business",
+      address: district ? `${district}, Dubai, UAE` : "Dubai, UAE",
+      placeId: finalPlaceId || "",
+      googleMapsUrl: resolvedUrl || mapsUrl,
+      reviewUrl: reviewUrl,
+      directReviewUrl: reviewUrl,
+      hasVerifiedPlaceId: !!finalPlaceId,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: "Failed to extract review link", details: err.message });
+    return res.status(500).json({ error: err.message || "Failed to extract review link" });
   }
 });
 

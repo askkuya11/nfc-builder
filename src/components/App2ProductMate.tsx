@@ -17,6 +17,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { BusinessLead } from '../types';
+import { isValidPlaceId, hexPairToPlaceIdBrowser } from '../utils/googlePlaceIdUtils';
 
 interface App2ProductMateProps {
   initialLead?: BusinessLead | null;
@@ -47,6 +48,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   const [generatedReviewUrl, setGeneratedReviewUrl] = useState<string>('');
   const [generatedInstagramUrl, setGeneratedInstagramUrl] = useState<string>('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [fetchError, setFetchError] = useState<string>('');
 
   const [copied, setCopied] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -80,63 +82,99 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       })
         .then((url) => setQrCodeDataUrl(url))
         .catch(() => {});
+    } else {
+      setQrCodeDataUrl('');
     }
   }, [generatedReviewUrl, generatedInstagramUrl, mode]);
+
+  const logDebugFlow = (bName: string, mapUrl: string, detectedPid: string, reviewUrl: string) => {
+    console.log(
+      `[Map Scout → Product Mate Flow]\n` +
+      `• Map Scout input: "${bName || 'N/A'}"\n` +
+      `• Extracted Google Maps URL: "${mapUrl || 'N/A'}"\n` +
+      `• Detected Place ID (if available): "${detectedPid || 'None'}"\n` +
+      `• Product Mate input: { businessName: "${bName}", googleMapsUrl: "${mapUrl}", placeId: "${detectedPid || ''}" }\n` +
+      `• Final review URL: "${reviewUrl || 'None (Verified Place ID not available)'}"`
+    );
+  };
 
   // Core Link Extractor & 5-Star Direct Review Link Generator
   const processGoogleMapLink = async (url: string, bName?: string, knownPlaceId?: string) => {
     setIsAnalyzing(true);
+    setFetchError('');
+    const targetUrl = (url || mapLinkInput || '').trim();
+    const targetName = (bName || businessName || '').trim();
+
     try {
-      // Call backend route or parse client-side
+      // 1. Call backend resolver (zero-billing, server-side redirect follower and protobuf decoder)
       const response = await fetch('/api/extract-review-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: url || mapLinkInput,
-          businessName: bName || businessName,
+          url: targetUrl,
+          businessName: targetName,
           placeId: knownPlaceId,
+          district: district,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setPlaceId(data.placeId);
-        setGeneratedReviewUrl(data.directReviewUrl);
-        if (data.businessName && !businessName) {
-          setBusinessName(data.businessName);
+        if (data.success && isValidPlaceId(data.placeId) && data.reviewUrl) {
+          setPlaceId(data.placeId);
+          setGeneratedReviewUrl(data.reviewUrl);
+          if (data.businessName && !businessName) {
+            setBusinessName(data.businessName);
+          }
+          logDebugFlow(targetName, targetUrl, data.placeId, data.reviewUrl);
+          return;
         }
-      } else {
-        // Fallback calculation
-        fallbackCalculation(url);
       }
-    } catch (e) {
-      fallbackCalculation(url);
+
+      // 2. Client-side fallback: direct parse without external API
+      clientSideResolve(targetUrl, targetName, knownPlaceId);
+    } catch {
+      clientSideResolve(targetUrl, targetName, knownPlaceId);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const fallbackCalculation = (url: string) => {
-    // Extract Place ID or CID if real
-    let pid = '';
-    const match = url.match(/[?&]place_id=([a-zA-Z0-9_-]+)/);
-    if (match) {
-      pid = match[1];
-    } else {
-      const chij = url.match(/(ChIJ[a-zA-Z0-9_-]{20,})/);
-      if (chij) {
-        pid = chij[1];
+  const clientSideResolve = (targetUrl: string, bName: string, knownPlaceId?: string) => {
+    let resolvedPlaceId = '';
+
+    // Check knownPlaceId
+    if (isValidPlaceId(knownPlaceId)) {
+      resolvedPlaceId = knownPlaceId;
+    }
+
+    // Check place_id parameter
+    if (!resolvedPlaceId && targetUrl) {
+      const pMatch = targetUrl.match(/[?&]place_id=([a-zA-Z0-9_-]+)/) || targetUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
+      if (pMatch && isValidPlaceId(pMatch[1])) {
+        resolvedPlaceId = pMatch[1];
       }
     }
 
-    if (pid && pid.length >= 25 && !pid.includes('_')) {
-      setPlaceId(pid);
-      setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
+    // Check Hex Pair !1s0x...:0x...
+    if (!resolvedPlaceId && targetUrl) {
+      const hexMatch = targetUrl.match(/!1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) || targetUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+      if (hexMatch) {
+        const calculated = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
+        if (isValidPlaceId(calculated)) {
+          resolvedPlaceId = calculated;
+        }
+      }
+    }
+
+    setPlaceId(resolvedPlaceId);
+    if (isValidPlaceId(resolvedPlaceId)) {
+      const finalUrl = `https://search.google.com/local/writereview?placeid=${resolvedPlaceId}`;
+      setGeneratedReviewUrl(finalUrl);
+      logDebugFlow(bName, targetUrl, resolvedPlaceId, finalUrl);
     } else {
-      setPlaceId('');
-      // Clean universal Google Maps destination URL that triggers the review card for this business
-      const cleanUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${businessName || 'Dubai Business'} ${district || 'Dubai'}`)}`;
-      setGeneratedReviewUrl(cleanUrl);
+      setGeneratedReviewUrl('');
+      logDebugFlow(bName, targetUrl, '', '');
     }
   };
 
@@ -313,7 +351,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-[11px] font-medium text-slate-400">
-                    Paste Google Maps Link (from App 1 or Google Maps app)
+                    Paste Google Maps Share Link (e.g., https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6 or from App 1)
                   </label>
                   {mapLinkInput && (
                     <button
@@ -334,7 +372,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                     rows={2}
                     value={mapLinkInput}
                     onChange={(e) => handleMapLinkChange(e.target.value)}
-                    placeholder="https://maps.google.com/?q=Al+Safadi+Downtown+Dubai&place_id=ChIJb7c9_g9tXz4R3t-M9_Q0Z0A..."
+                    placeholder="https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6"
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none leading-relaxed"
                   />
                 </div>
@@ -346,12 +384,8 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700 disabled:opacity-50"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{isAnalyzing ? 'Extracting Place ID...' : 'Extract & Generate Review URL'}</span>
+                    <span>{isAnalyzing ? 'Generating Review URL...' : 'Generate Review URL'}</span>
                   </button>
-
-                  <span className="text-[10px] text-slate-500">
-                    Auto-parses Place ID and CID parameters
-                  </span>
                 </div>
               </div>
             ) : (
@@ -395,19 +429,34 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 <span className="font-semibold">
                   {mode === 'google' ? 'Google 5-Star Review Write URL:' : 'Instagram Direct Follow URL:'}
                 </span>
-                {placeId && mode === 'google' && (
-                  <span className="text-[10px] font-mono text-slate-500">
+                {mode === 'google' && isValidPlaceId(placeId) && (
+                  <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-700/50">
                     Place ID: {placeId}
                   </span>
                 )}
               </div>
 
-              <p className="text-xs font-mono text-amber-300 break-all select-all leading-relaxed">
-                {(mode === 'google' ? generatedReviewUrl : generatedInstagramUrl) ||
-                  (mode === 'google'
-                    ? 'https://search.google.com/local/writereview?placeid=...'
-                    : 'https://www.instagram.com/...')}
-              </p>
+              {mode === 'google' ? (
+                generatedReviewUrl ? (
+                  <p className="text-xs font-mono text-amber-300 break-all select-all leading-relaxed">
+                    {generatedReviewUrl}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1 py-1">
+                    <div className="flex items-center gap-1.5 text-amber-400 font-semibold text-xs">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Verified Google Place ID not available.</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Google Review URL cannot be generated automatically without a verified Place ID.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <p className="text-xs font-mono text-pink-300 break-all select-all leading-relaxed">
+                  {generatedInstagramUrl || 'https://www.instagram.com/...'}
+                </p>
+              )}
             </div>
 
             {/* Action buttons: Copy, Test Link, and HAND-OFF TO NFC TOOL */}
@@ -416,7 +465,8 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 onClick={() =>
                   copyUrl(mode === 'google' ? generatedReviewUrl : generatedInstagramUrl)
                 }
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
+                disabled={mode === 'google' && !generatedReviewUrl}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {copied ? (
                   <>
@@ -431,21 +481,27 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 )}
               </button>
 
-              <a
-                href={mode === 'google' ? generatedReviewUrl : generatedInstagramUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
+              <button
+                type="button"
+                onClick={() => {
+                  const urlToTest = mode === 'google' ? generatedReviewUrl : generatedInstagramUrl;
+                  if (urlToTest) {
+                    window.open(urlToTest, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                disabled={mode === 'google' && !generatedReviewUrl}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Test how customer sees the review screen"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
                 <span>Test in Browser</span>
-              </a>
+              </button>
 
               {/* PRIMARY ACTION: SEND TO APP 3 */}
               <button
                 onClick={handleTransferToNfc}
-                className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/20 ml-auto"
+                disabled={mode === 'google' && !generatedReviewUrl}
+                className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/20 ml-auto disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span>Send to NFC Tool (App 3)</span>
                 <ArrowRight className="w-4 h-4" />

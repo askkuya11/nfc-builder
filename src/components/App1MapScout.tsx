@@ -231,7 +231,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         address: `${bName}, ${coTenant.floor}, Unit ${coTenant.unitNumber}, ${parentLead?.district || district}, Dubai`,
         phone: coTenant.phone || '+971 4 222 1111',
         placeId: `gis-${coTenant.id}`,
-        mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coTenant.name + ' Dubai')}`,
+        mapsUrl: `https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6`,
         directReviewUrl: `https://search.google.com/local/writereview?placeid=${coTenant.id}`,
         pitchOpportunity: coTenant.pitchOpportunity || 'high',
         pitchAngle: `High-value co-tenant inside ${bName}. Located at ${coTenant.floor}, Unit ${coTenant.unitNumber}. On same walking corridor!`,

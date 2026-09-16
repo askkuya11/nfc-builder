@@ -645,14 +645,15 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
 
       marker.bindPopup(popupHtml);
 
-      // 5. Render 2GIS Building Entrances when enabled or in 2GIS mode
-      if ((showGisEntrances || mapEngine === '2gis') && (isSelected || currentZoom >= 15)) {
+      // 5. Render 2GIS Building Entrances ONLY when this business is clicked/selected
+      // User requirement: "show only building entrance once i click the business to make it more simple"
+      if (showGisEntrances && isSelected) {
         buildingInfo.entrances.forEach((entrance) => {
           const entranceIconHtml = `
             <div class="flex flex-col items-center cursor-pointer group" style="transform: translate(-50%, -100%);">
-              <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-950/95 border border-emerald-400 text-emerald-300 font-mono text-[9px] font-bold shadow-lg hover:scale-115 transition">
-                <span>🚪</span>
-                <span class="truncate max-w-[100px]">${entrance.name.split('(')[0].trim()}</span>
+              <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-950/95 border-2 border-emerald-400 text-emerald-300 font-mono text-[9px] font-black shadow-xl hover:scale-115 transition">
+                <span class="text-xs">🚪</span>
+                <span class="truncate max-w-[120px] font-bold">${entrance.name.split('(')[0].trim()}</span>
               </div>
               <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-emerald-400"></div>
             </div>
@@ -668,7 +669,7 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
             icon: entranceDivIcon,
           }).addTo(markersLayerRef.current!);
 
-          // Dashed connector line from doorway to building pin
+          // Dashed connector line from doorway directly to clicked business pin
           const entranceLine = L.polyline(
             [
               [entrance.lat, entrance.lng],
@@ -676,9 +677,9 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
             ],
             {
               color: '#10b981',
-              weight: 2,
-              dashArray: '4, 4',
-              opacity: 0.7,
+              weight: 2.5,
+              dashArray: '5, 5',
+              opacity: 0.85,
             }
           ).addTo(mapInstanceRef.current!);
 
@@ -1011,10 +1012,10 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
                   ? 'bg-emerald-950 text-emerald-300 border-emerald-400 shadow-sm shadow-emerald-500/20'
                   : 'bg-slate-900 text-slate-400 border-slate-800'
               }`}
-              title="Toggle 2GIS.ae building entrance pins"
+              title="Show building entrance door only when a business is clicked"
             >
               <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
-              <span>2GIS Entrances: {showGisEntrances ? 'ON' : 'OFF'}</span>
+              <span>Entrance on Click: {showGisEntrances ? 'ON' : 'OFF'}</span>
             </button>
           </div>
 
@@ -1106,6 +1107,14 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
                 #{currentTargetLead.rank} {currentTargetLead.name}
               </span>
             </div>
+
+            {/* Clicked Business Entrance Indicator */}
+            {currentTargetLead.buildingInfo?.primaryEntrance && (
+              <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[11px]">
+                <span>🚪 Door:</span>
+                <span className="text-white font-bold">{currentTargetLead.buildingInfo.primaryEntrance.name.split('(')[0].trim()}</span>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions for Route */}
