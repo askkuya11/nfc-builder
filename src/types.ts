@@ -33,7 +33,67 @@ export interface BusinessLead {
   status?: 'new' | 'contacted' | 'nfc_written' | 'sold';
   lat?: number;
   lng?: number;
+  distanceKm?: number;
+  distanceLabel?: string;
+  rank?: number;
+  metroExit?: string;
+  metroStationName?: string;
+  footsteps?: number;
+  walkMinutes?: number;
+  walkingGuide?: string;
+  yearsInBusiness?: number;
+  establishedYear?: number;
+  reviewsPerYear?: number;
+  yearsVsReviewsGap?: string;
+  contactPersonName?: string;
+  contactPersonRole?: string;
+  contactDirectPhone?: string;
+  notes?: string;
+  customContactUpdated?: boolean;
   audit?: GmbAuditData;
+  buildingInfo?: GisBuildingInfo;
+}
+
+export interface GisBuildingEntrance {
+  id: string;
+  name: string;
+  doorType: 'main_glass_door' | 'revolving_door' | 'side_entrance' | 'parking_elevator' | 'service_door';
+  side: 'north' | 'south' | 'east' | 'west' | 'street' | 'courtyard';
+  lat: number;
+  lng: number;
+  guidance: string;
+  isPrimary?: boolean;
+}
+
+export interface GisIndoorBusiness {
+  id: string;
+  name: string;
+  category: string;
+  floor: string;
+  floorNumber: number;
+  unitNumber: string;
+  phone?: string;
+  reviewCount: number;
+  rating: number;
+  pitchOpportunity?: 'high' | 'medium' | 'established';
+  isTargetLead?: boolean;
+}
+
+export interface GisBuildingInfo {
+  buildingName: string;
+  arabicName?: string;
+  makaniNumber: string;
+  gisId: string;
+  gisUrl: string;
+  gisSearchQuery: string;
+  floorsCount: number;
+  totalOrganizations: number;
+  currentLeadFloor: string;
+  currentLeadUnit: string;
+  primaryEntrance: GisBuildingEntrance;
+  entrances: GisBuildingEntrance[];
+  indoorBusinesses: GisIndoorBusiness[];
+  salesAdvantageTip: string;
 }
 
 export type CardTheme = 'gold_black' | 'google_clean' | 'instagram_sunset' | 'matte_noir' | 'dubai_emerald';
