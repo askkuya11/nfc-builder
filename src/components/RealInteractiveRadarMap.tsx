@@ -199,15 +199,45 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
       map.on('zoomend', () => {
         setCurrentZoom(map.getZoom());
       });
+
+      // Trigger immediate size validation for mobile viewports
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 350);
+    }
+
+    // Set up ResizeObserver to handle container size changes on mobile
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
     }
 
     return () => {
+      resizeObserver.disconnect();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
   }, []);
+
+  // Invalidate map size whenever engine or type changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [mapEngine, mapType]);
 
   // Update map center when district changes
   useEffect(() => {

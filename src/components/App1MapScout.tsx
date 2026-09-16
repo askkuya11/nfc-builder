@@ -51,6 +51,11 @@ import {
   Minimize2,
   Building2,
   DoorOpen,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
+  Map,
+  Columns,
 } from 'lucide-react';
 
 interface App1MapScoutProps {
@@ -189,7 +194,8 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map' | 'split'>('list');
+  const [filtersCollapsed, setFiltersCollapsed] = useState<boolean>(false);
   const [activeLeadOnMap, setActiveLeadOnMap] = useState<BusinessLead | null>(null);
   const [radarScanning, setRadarScanning] = useState<boolean>(true);
   const [radarCategoryFilter, setRadarCategoryFilter] = useState<'all' | 'barbershop' | 'dental' | 'high_need'>('all');
@@ -542,8 +548,75 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </div>
         </div>
 
-        {/* Filter Controls Box */}
-        <div className="mt-4 pt-3 border-t border-slate-700/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+        {/* Mobile-First View Switcher & Filter Toggle Header */}
+        <div className="mt-3 pt-3 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-2.5">
+          {/* Quick View Mode Switcher */}
+          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-700/80 shadow-md">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'list'
+                  ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>List View</span>
+              {leads.length > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${viewMode === 'list' ? 'bg-slate-950 text-amber-400' : 'bg-slate-800 text-slate-300'}`}>
+                  {filteredLeads.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('map')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'map'
+                  ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Map className="w-3.5 h-3.5" />
+              <span>Radar Map</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('split')}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'split'
+                  ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+              title="View Radar Map and List View side by side"
+            >
+              <Columns className="w-3.5 h-3.5" />
+              <span>Split View</span>
+            </button>
+          </div>
+
+          {/* Collapsible Filters Toggle for Mobile */}
+          <button
+            type="button"
+            onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+          >
+            <Filter className="w-3.5 h-3.5 text-amber-400" />
+            <span>Filters: <strong className="text-white">{district.split('(')[0].trim()}</strong></span>
+            {filtersCollapsed ? (
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            ) : (
+              <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Filter Controls Box (Collapsible on Mobile) */}
+        {!filtersCollapsed && (
+          <div className="mt-3 pt-3 border-t border-slate-700/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 animate-fadeIn">
           {/* District Selector */}
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
@@ -680,6 +753,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
             </div>
           </div>
         </div>
+      )}
 
         {/* Live Search Input Bar & Search Button */}
         <div className="mt-3 flex flex-col sm:flex-row items-stretch gap-2">
@@ -791,29 +865,45 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
             title="Toggle GMB Everywhere audit overlay on cards"
           >
             <Gauge className="w-3.5 h-3.5 text-amber-400" />
-            <span>GMB Everywhere Overlay: {auditOverlayEnabled ? 'ON' : 'OFF'}</span>
+            <span>GMB Everywhere: {auditOverlayEnabled ? 'ON' : 'OFF'}</span>
           </button>
 
           <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
             <button
+              type="button"
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1 rounded-md font-medium transition ${
+              className={`flex items-center gap-1 px-3 py-1 rounded-md font-medium transition ${
                 viewMode === 'list'
                   ? 'bg-amber-500 text-slate-950 font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              List View
+              <LayoutGrid className="w-3 h-3" />
+              <span>List ({filteredLeads.length})</span>
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('map')}
-              className={`px-3 py-1 rounded-md font-medium transition ${
+              className={`flex items-center gap-1 px-3 py-1 rounded-md font-medium transition ${
                 viewMode === 'map'
                   ? 'bg-amber-500 text-slate-950 font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Radar Map
+              <Map className="w-3 h-3" />
+              <span>Radar Map</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('split')}
+              className={`hidden sm:flex items-center gap-1 px-3 py-1 rounded-md font-medium transition ${
+                viewMode === 'split'
+                  ? 'bg-amber-500 text-slate-950 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Columns className="w-3 h-3" />
+              <span>Split</span>
             </button>
           </div>
         </div>
@@ -889,7 +979,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
       )}
 
       {/* RADAR MAP VIEW */}
-      {viewMode === 'map' && !loading && leads.length > 0 && (() => {
+      {(viewMode === 'map' || viewMode === 'split') && !loading && leads.length > 0 && (() => {
         const centerInfo = resolveDistrictCenter(district);
 
         // Filter leads for the radar view if user selects a subfilter
@@ -1271,7 +1361,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
       })()}
 
       {/* BUSINESS LEADS LIST VIEW */}
-      {viewMode === 'list' && !loading && leads.length > 0 && (
+      {(viewMode === 'list' || viewMode === 'split') && !loading && leads.length > 0 && (
         <>
           {filteredLeads.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400 text-xs">
@@ -1645,6 +1735,31 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </button>
         </div>
       )}
+
+      {/* Mobile Floating Toggle FAB between List and Radar Map */}
+      <div className="sm:hidden fixed bottom-20 right-4 z-40 animate-bounce">
+        <button
+          type="button"
+          onClick={() => {
+            const nextMode = viewMode === 'map' ? 'list' : 'map';
+            setViewMode(nextMode);
+            window.scrollTo({ top: 350, behavior: 'smooth' });
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-2xl shadow-amber-500/50 border-2 border-white ring-2 ring-amber-400/50 active:scale-95 transition"
+        >
+          {viewMode === 'map' ? (
+            <>
+              <LayoutGrid className="w-4 h-4" />
+              <span>Show List ({filteredLeads.length})</span>
+            </>
+          ) : (
+            <>
+              <Map className="w-4 h-4" />
+              <span>Open Radar Map</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Floating Save Toast Notification */}
       {contactSaveToast && (
