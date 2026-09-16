@@ -546,7 +546,7 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
       customQuery?.toLowerCase().includes("barber") ||
       customQuery?.toLowerCase().includes("salon");
 
-    // Check if district has known lat/lng coordinates for Overpass API radius search & distance sorting
+    // Check if district has known lat/lng coordinates for distance sorting & optional fast enrichment
     let targetCoords: { lat: number; lng: number } | null = null;
     const lowerDist = (district || customQuery || "").toLowerCase();
     for (const [key, coords] of Object.entries(DISTRICT_COORDS)) {
@@ -556,59 +556,27 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
       }
     }
 
-    if (targetCoords) {
-      const overpassPlaces = await fetchOverpassDubaiPlaces(targetCoords.lat, targetCoords.lng, category, district);
-      if (overpassPlaces.length > 0) {
-        const existingNames = new Set(results.map(r => r.name.toLowerCase()));
-        for (const op of overpassPlaces) {
-          if (!existingNames.has(op.name.toLowerCase())) {
-            results.push(op);
-            existingNames.add(op.name.toLowerCase());
-          }
-        }
-      }
-    }
-
-    if (isBarberSearch || (category && category !== "All Categories") || (customQuery && customQuery.trim().length >= 2) || String(count).toLowerCase() === "all" || results.length < 15) {
-      const searchTerms: string[] = [];
-      if (customQuery && customQuery.trim().length >= 2) {
-        searchTerms.push(`${customQuery.trim()} Dubai`);
-        if (!customQuery.toLowerCase().includes("dubai")) {
-          searchTerms.push(`${customQuery.trim()} Al Rigga Metro Dubai`);
-        }
-      }
-      if (isBarberSearch) {
-        searchTerms.push(`barbershop nearby ${cleanDist} metro station Dubai`);
-        searchTerms.push(`Barbershop Gents Salon ${cleanDist} Dubai`);
-        searchTerms.push(`Barber ${cleanDist} Dubai`);
-        searchTerms.push(`Gents Salon ${cleanDist} Dubai`);
-      } else if (category && category !== "All Categories") {
-        searchTerms.push(`${category} ${cleanDist} Dubai`);
-      }
-
-      for (const term of searchTerms) {
-        const livePlaces = await fetchLiveDubaiPlaces(term, category, district);
-        if (livePlaces.length > 0) {
-          const existingNames = new Set(results.map(r => r.name.toLowerCase()));
-          for (const lp of livePlaces) {
-            if (!existingNames.has(lp.name.toLowerCase())) {
-              if (
-                category === "Men's Barbershops & Gents Salons" &&
-                !(
-                  lp.category === "Men's Barbershops & Gents Salons" ||
-                  lp.name.toLowerCase().includes("barber") ||
-                  lp.name.toLowerCase().includes("gents") ||
-                  lp.name.toLowerCase().includes("grooming") ||
-                  lp.name.toLowerCase().includes("men")
-                )
-              ) {
-                continue;
+    // Fast non-blocking live extraction with strict 800ms timeout race to prevent mobile stalls
+    if (results.length < 10) {
+      try {
+        const timeoutPromise = new Promise<RealDubaiBusiness[]>((resolve) => setTimeout(() => resolve([]), 800));
+        if (targetCoords) {
+          const overpassPlaces = await Promise.race([
+            fetchOverpassDubaiPlaces(targetCoords.lat, targetCoords.lng, category, district),
+            timeoutPromise,
+          ]);
+          if (overpassPlaces && overpassPlaces.length > 0) {
+            const existingNames = new Set(results.map(r => r.name.toLowerCase()));
+            for (const op of overpassPlaces) {
+              if (!existingNames.has(op.name.toLowerCase())) {
+                results.push(op);
+                existingNames.add(op.name.toLowerCase());
               }
-              results.push(lp);
-              existingNames.add(lp.name.toLowerCase());
             }
           }
         }
+      } catch (_e) {
+        // Continue with comprehensive local verified dataset
       }
     }
 

@@ -1172,15 +1172,15 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
       )}
 
       {/* Main Map Container */}
-      <div className="relative w-full h-[540px] sm:h-[620px] bg-slate-950">
+      <div className="relative w-full h-[380px] sm:h-[500px] md:h-[600px] bg-slate-950 overflow-hidden">
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
         {/* Floating Map Zoom & Navigation Controls */}
-        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 shadow-2xl">
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex flex-col gap-1.5 shadow-2xl">
           <button
             type="button"
             onClick={handleZoomIn}
-            className="w-9 h-9 rounded-lg bg-slate-900/95 hover:bg-slate-800 text-white border border-slate-700 flex items-center justify-center transition shadow-lg"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-900/95 hover:bg-slate-800 text-white border border-slate-700 flex items-center justify-center transition shadow-lg"
             title="Zoom In (+)"
           >
             <ZoomIn className="w-4 h-4" />
@@ -1188,7 +1188,7 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
           <button
             type="button"
             onClick={handleZoomOut}
-            className="w-9 h-9 rounded-lg bg-slate-900/95 hover:bg-slate-800 text-white border border-slate-700 flex items-center justify-center transition shadow-lg"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-900/95 hover:bg-slate-800 text-white border border-slate-700 flex items-center justify-center transition shadow-lg"
             title="Zoom Out (-)"
           >
             <ZoomOut className="w-4 h-4" />
@@ -1197,7 +1197,7 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
           <button
             type="button"
             onClick={handleFitWholeArea}
-            className="w-9 h-9 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold flex items-center justify-center transition shadow-lg"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold flex items-center justify-center transition shadow-lg"
             title="Fit Whole Area (See All Establishments)"
           >
             <Maximize2 className="w-4 h-4" />
@@ -1205,7 +1205,7 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
           <button
             type="button"
             onClick={handleFocusMetroHub}
-            className={`w-9 h-9 rounded-lg bg-slate-900/95 hover:bg-slate-800 ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-900/95 hover:bg-slate-800 ${
               mapEngine === '2gis' ? 'text-emerald-400' : 'text-amber-400'
             } border border-slate-700 flex items-center justify-center transition shadow-lg`}
             title="Center on Metro Station Hub"
@@ -1216,44 +1216,36 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
 
         {/* Floating Route Summary Overlay */}
         {showRouteTrail && displayedLeads.length > 0 && (
-          <div className="absolute bottom-4 left-4 z-20 bg-slate-950/95 backdrop-blur-md border border-amber-500/40 rounded-xl p-3 text-xs font-mono shadow-2xl max-w-sm hidden sm:block">
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
-                <Footprints className="w-4 h-4" />
-                <span>{routeMode === 'direct' ? 'POINT A ➔ POINT B FOOTSTEPS' : 'FIELD SALES CIRCUIT'}</span>
+          <div className="absolute bottom-2 left-2 z-20 bg-slate-950/95 backdrop-blur-md border border-amber-500/40 rounded-xl p-2.5 text-xs font-mono shadow-2xl max-w-xs hidden sm:block">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
+                <Footprints className="w-3.5 h-3.5" />
+                <span>{routeMode === 'direct' ? 'POINT A ➔ POINT B' : 'FIELD SALES CIRCUIT'}</span>
               </div>
-              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold border border-amber-500/30">
                 {routeMode === 'direct' ? 'Direct Path' : `${routeMaxStops} Stops`}
               </span>
             </div>
 
             {routeMode === 'direct' && currentTargetLead ? (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-1 text-[11px]">
-                  <span className="text-emerald-400 font-bold">🟢 [A] Metro ({currentTargetLead.metroExit || 'Exit 1'})</span>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-1 text-[10px]">
+                  <span className="text-emerald-400 font-bold">🟢 Metro ({currentTargetLead.metroExit || 'Exit 1'})</span>
                   <span className="text-slate-500">➔</span>
-                  <span className="text-amber-400 font-bold truncate max-w-[140px]">🟠 [B] #{currentTargetLead.rank} {currentTargetLead.name}</span>
+                  <span className="text-amber-400 font-bold truncate max-w-[120px]">🟠 #{currentTargetLead.rank} {currentTargetLead.name}</span>
                 </div>
-                <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px]">
-                  <span className="text-amber-400 font-bold">👣 {currentSteps} footsteps</span>
-                  <span className="text-emerald-400 font-semibold">~{currentWalkMins} min walk</span>
+                <div className="flex items-center justify-between p-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px]">
+                  <span className="text-amber-400 font-bold">👣 {currentSteps} steps</span>
+                  <span className="text-emerald-400 font-semibold">~{currentWalkMins} min</span>
                   <span className="text-slate-400 font-semibold">~{currentDistMeters}m</span>
-                </div>
-                <div className="text-[10px] text-slate-400 truncate">
-                  {currentTargetLead.walkingGuide || `Direct walk along commercial pedestrian walkway`}
                 </div>
               </div>
             ) : (
               <div>
-                <div className="flex items-center gap-3 text-slate-300 text-[11px]">
-                  <span>
-                    Total Walk: <strong className="text-white">{totalFootsteps.toLocaleString()}</strong> footsteps
-                  </span>
+                <div className="flex items-center gap-2 text-slate-300 text-[10px]">
+                  <span>Total Walk: <strong className="text-white">{totalFootsteps.toLocaleString()}</strong> steps</span>
                   <span>•</span>
-                  <span className="text-emerald-400 font-semibold">~{totalWalkMinutes} min walk</span>
-                </div>
-                <div className="mt-1 text-[10px] text-slate-400 truncate">
-                  Order: {district.replace(/\(.*?\)/g, '').trim()} Metro ➔ #1 {displayedLeads[0]?.name} ➔ #2 {displayedLeads[1]?.name || '...'}
+                  <span className="text-emerald-400 font-semibold">~{totalWalkMinutes} min</span>
                 </div>
               </div>
             )}
@@ -1261,31 +1253,22 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
         )}
 
         {/* Top-Left Mode & Category Legend Overlay */}
-        <div className="absolute top-4 left-4 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-slate-300 flex items-center gap-3 shadow-xl">
+        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-mono text-slate-300 flex items-center gap-2 shadow-xl max-w-[calc(100vw-5rem)] overflow-x-auto scrollbar-none">
           {mapEngine === '2gis' ? (
-            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>2GIS 3D Building View (Free • No API)</span>
+            <span className="flex items-center gap-1 text-emerald-400 font-bold shrink-0">
+              <Building2 className="w-3 h-3" />
+              <span>2GIS 3D View</span>
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 text-blue-400 font-bold">
-              <Compass className="w-3.5 h-3.5" />
-              <span>Google Maps Engine (Free)</span>
+            <span className="flex items-center gap-1 text-blue-400 font-bold shrink-0">
+              <Compass className="w-3 h-3" />
+              <span>Google Maps</span>
             </span>
           )}
-          <span className="hidden md:inline text-slate-600">|</span>
-          <span className="flex items-center gap-1 text-amber-300">
-            <span>✂️ Barbershop</span>
-          </span>
-          <span className="hidden sm:flex items-center gap-1 text-cyan-300">
-            <span>🦷 Dental</span>
-          </span>
-          <span className="hidden sm:flex items-center gap-1 text-orange-300">
-            <span>🍽️ Dining</span>
-          </span>
-          <span className="flex items-center gap-1 text-emerald-400 font-mono">
-            <span>🚪 Entrances</span>
-          </span>
+          <span className="text-slate-600">|</span>
+          <span className="text-amber-300 shrink-0">✂️ Barber</span>
+          <span className="text-cyan-300 shrink-0">🦷 Dental</span>
+          <span className="text-emerald-400 shrink-0">🚪 Doors</span>
         </div>
 
         {/* Floating Active Lead / Building Card on Map */}
@@ -1296,59 +1279,52 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
 
           return (
             <div
-              className={`absolute bottom-4 right-4 z-20 bg-slate-950/95 backdrop-blur-md border ${
+              className={`absolute bottom-2 left-2 right-2 sm:left-auto sm:right-4 sm:bottom-4 z-20 bg-slate-950/95 backdrop-blur-md border ${
                 mapEngine === '2gis' ? 'border-emerald-500/60 shadow-emerald-950/50' : 'border-slate-800'
-              } rounded-xl p-3 text-xs font-mono shadow-2xl max-w-xs sm:max-w-sm animate-fadeIn`}
+              } rounded-xl p-2.5 sm:p-3 text-xs font-mono shadow-2xl max-w-full sm:max-w-sm animate-fadeIn`}
             >
               {/* Card Header */}
-              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2 mb-2">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5 mb-1.5">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <div className={`p-1.5 rounded-lg ${activeMeta.badgeBgClass} ${activeMeta.badgeTextClass} shrink-0`}>
-                    <ActiveIcon className="w-3.5 h-3.5" />
+                  <div className={`p-1 rounded-lg ${activeMeta.badgeBgClass} ${activeMeta.badgeTextClass} shrink-0`}>
+                    <ActiveIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-bold text-white text-xs truncate leading-tight">
+                    <div className="font-bold text-white text-[11px] sm:text-xs truncate leading-tight">
                       #{activeLead.rank} {activeLead.name}
                     </div>
-                    <div className="text-[10px] text-slate-400">{activeMeta.label}</div>
+                    <div className="text-[9px] text-slate-400">{activeMeta.label}</div>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded shrink-0">
+                <span className="text-[9px] sm:text-[10px] font-mono bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded shrink-0">
                   ⭐ {activeLead.rating} ({activeLead.reviewCount})
                 </span>
               </div>
 
               {/* 2GIS Building Intel Box */}
-              <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-500/30 rounded-lg p-2 text-[11px] text-slate-300 space-y-1 mb-2">
+              <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-500/30 rounded-lg p-1.5 text-[10px] text-slate-300 space-y-0.5 mb-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-emerald-300 truncate">🏢 {activeBInfo.buildingName}</span>
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40 shrink-0">
+                  <span className="text-[8px] bg-emerald-500/20 text-emerald-300 px-1 py-0.2 rounded border border-emerald-500/40 shrink-0">
                     Makani: {activeBInfo.makaniNumber}
                   </span>
                 </div>
-                <div className="text-amber-300 truncate text-[10px]">
+                <div className="text-amber-300 truncate text-[9px]">
                   🚪 <strong>{activeBInfo.primaryEntrance.name}</strong>
-                </div>
-                <div className="text-slate-400 flex items-center justify-between text-[10px]">
-                  <span>📍 {activeBInfo.currentLeadFloor} • {activeBInfo.currentLeadUnit}</span>
-                  <span className="text-emerald-400 font-bold">{activeBInfo.indoorBusinesses.length} co-tenants</span>
                 </div>
               </div>
 
               {/* Point A (Metro) ➔ Point B (Business) Footstep Walk Box */}
-              <div className="bg-amber-950/40 border border-amber-500/30 rounded-lg p-2 text-[11px] text-amber-200 space-y-1 mb-2">
-                <div className="flex items-center justify-between text-[10px] font-bold">
-                  <span className="text-emerald-400">🟢 Point A: Metro ({activeLead.metroExit || 'Exit 1'})</span>
+              <div className="bg-amber-950/40 border border-amber-500/30 rounded-lg p-1.5 text-[10px] text-amber-200 space-y-0.5 mb-1.5">
+                <div className="flex items-center justify-between text-[9px] font-bold">
+                  <span className="text-emerald-400">🟢 Metro ({activeLead.metroExit || 'Exit 1'})</span>
                   <span className="text-slate-500">➔</span>
-                  <span className="text-amber-300">🟠 Point B: Venue</span>
+                  <span className="text-amber-300">🟠 Venue</span>
                 </div>
-                <div className="flex items-center justify-between text-xs font-bold text-white">
+                <div className="flex items-center justify-between text-[11px] font-bold text-white">
                   <span>👣 {activeLead.footsteps || 160} Steps</span>
                   <span className="text-emerald-400">~{activeLead.walkMinutes || 2} min walk</span>
                   <span className="text-slate-300">~{Math.round((activeLead.footsteps || 160) * 0.75)}m</span>
-                </div>
-                <div className="text-[10px] text-slate-400 truncate">
-                  {activeLead.walkingGuide || `Direct walk along commercial walkway`}
                 </div>
               </div>
 
@@ -1357,28 +1333,28 @@ export const RealInteractiveRadarMap: React.FC<RealInteractiveRadarMapProps> = (
                 <button
                   type="button"
                   onClick={() => onOpenGisModal && onOpenGisModal(activeLead)}
-                  className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition shadow-sm"
+                  className="flex-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center justify-center gap-1 transition shadow-sm"
                 >
-                  <DoorOpen className="w-3.5 h-3.5" />
+                  <DoorOpen className="w-3 h-3" />
                   <span>2GIS Inside Directory</span>
                 </button>
                 <a
                   href={activeBInfo.gisUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition"
+                  className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition"
                   title="Open 3D building on 2GIS.ae"
                 >
-                  <Building2 className="w-3.5 h-3.5" />
+                  <Building2 className="w-3 h-3" />
                 </a>
                 <a
                   href={activeLead.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeLead.name + ' Dubai')}` }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-blue-300 border border-blue-700/60 transition"
+                  className="p-1 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-blue-300 border border-blue-700/60 transition"
                   title="Open in Google Maps"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
