@@ -132,12 +132,12 @@ export default function App() {
         </main>
 
         {/* Mobile Sticky Bottom Floating Navigation Dock */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 py-1.5 px-3 max-w-6xl mx-auto flex items-center justify-around select-none">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-3 max-w-6xl mx-auto flex items-center justify-around select-none shadow-2xl">
           <button
             id="nav-dock-scout"
             onClick={() => setActiveTab('scout')}
-            className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition ${
-              activeTab === 'scout' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 ${
+              activeTab === 'scout' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Compass className="w-5 h-5" />
@@ -147,8 +147,8 @@ export default function App() {
           <button
             id="nav-dock-generator"
             onClick={() => setActiveTab('generator')}
-            className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition ${
-              activeTab === 'generator' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 ${
+              activeTab === 'generator' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Sparkles className="w-5 h-5" />
@@ -158,8 +158,8 @@ export default function App() {
           <button
             id="nav-dock-nfc"
             onClick={() => setActiveTab('nfc')}
-            className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition ${
-              activeTab === 'nfc' ? 'text-amber-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 ${
+              activeTab === 'nfc' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Radio className="w-5 h-5" />
