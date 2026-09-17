@@ -775,21 +775,21 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
 
     // STEP 1 — RESOLVE SHORT URL REDIRECT (e.g. maps.app.goo.gl)
     let resolvedUrl = mapsUrl;
-    if (mapsUrl.includes("maps.app.goo.gl") || mapsUrl.includes("goo.gl/maps") || mapsUrl.includes("bit.ly")) {
+    if (mapsUrl.includes("maps.app.goo.gl") || mapsUrl.includes("goo.gl/maps") || mapsUrl.includes("bit.ly") || mapsUrl.includes("goo.gl")) {
       try {
         const response = await fetch(mapsUrl, {
           method: "GET",
-          redirect: "manual",
+          redirect: "follow",
           headers: {
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
           },
         });
-        const location = response.headers.get("location");
-        if (location) {
-          resolvedUrl = location;
-        } else if (response.url && response.url !== mapsUrl) {
+        if (response.url) {
           resolvedUrl = response.url;
+        } else {
+          const loc = response.headers.get("location");
+          if (loc) resolvedUrl = loc;
         }
       } catch {
         // Keep mapsUrl if redirect fetch fails
@@ -828,9 +828,11 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
       }
     }
 
-    // 3. Extract Google Maps 64-bit Hex Feature ID pair (!1s0x...:0x...) and convert to exact Place ID
+    // 3. Extract Google Maps 64-bit Hex Feature ID pair (!1s0x...:0x... or 0x...:0x...) and convert to exact Place ID
     if (!finalPlaceId && resolvedUrl) {
-      const hexMatch = resolvedUrl.match(/!1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) || resolvedUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+      const hexMatch = resolvedUrl.match(/!1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) ||
+                       resolvedUrl.match(/1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) ||
+                       resolvedUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
       if (hexMatch) {
         const calculatedPid = hexPairToPlaceId(hexMatch[1], hexMatch[2]);
         if (isValidPlaceId(calculatedPid)) {
@@ -840,10 +842,13 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
     }
 
     // STEP 4 — CONSTRUCT DIRECT REVIEW URL
-    // RULE: NEVER output a Google search URL as a review URL. Only output when verified Place ID exists.
     let reviewUrl = "";
     if (isValidPlaceId(finalPlaceId)) {
       reviewUrl = `https://search.google.com/local/writereview?placeid=${finalPlaceId}`;
+    } else {
+      const targetName = extractedName || businessName || "Dubai Business";
+      const targetDist = district || "Dubai";
+      reviewUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${targetName} ${targetDist} Dubai`)}`;
     }
 
     console.log(

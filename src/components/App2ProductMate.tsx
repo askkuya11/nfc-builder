@@ -155,33 +155,54 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     setFetchError('');
 
     try {
-      if (url.includes('placeid=')) {
-        const match = url.match(/placeid=([a-zA-Z0-9_-]+)/);
-        if (match && match[1] && isOfficialChIJPlaceId(match[1])) {
-          setPlaceId(match[1]);
-          setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${match[1]}`);
+      const rawUrl = url.trim();
+
+      // 1. Check for placeid= query parameter
+      const placeIdMatch = rawUrl.match(/placeid=([a-zA-Z0-9_-]+)/);
+      if (placeIdMatch && placeIdMatch[1] && isOfficialChIJPlaceId(placeIdMatch[1])) {
+        const pid = placeIdMatch[1];
+        setPlaceId(pid);
+        setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // 2. Check for explicit ChIJ Place ID anywhere in URL
+      const chijMatch = rawUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
+      if (chijMatch && chijMatch[1] && isOfficialChIJPlaceId(chijMatch[1])) {
+        const pid = chijMatch[1];
+        setPlaceId(pid);
+        setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // 3. Check for 64-bit Hex Feature ID pair (0x...:0x...) anywhere in URL
+      const hexMatch = rawUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+      if (hexMatch && hexMatch[1] && hexMatch[2]) {
+        const derived = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
+        if (derived && isOfficialChIJPlaceId(derived)) {
+          setPlaceId(derived);
+          setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${derived}`);
           setIsAnalyzing(false);
           return;
         }
       }
 
-      if (url.includes('data=')) {
-        const hexMatch = url.match(/1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
-        if (hexMatch && hexMatch[1] && hexMatch[2]) {
-          const derived = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
-          if (derived && isOfficialChIJPlaceId(derived)) {
-            setPlaceId(derived);
-            setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${derived}`);
-            setIsAnalyzing(false);
-            return;
-          }
+      // 4. Extract business name from URL path if available
+      const placeNameMatch = rawUrl.match(/\/maps\/place\/([^/@?]+)/);
+      if (placeNameMatch && placeNameMatch[1]) {
+        const nameFromUrl = decodeURIComponent(placeNameMatch[1].replace(/\+/g, ' '));
+        if (nameFromUrl && nameFromUrl.length > 2 && !businessName) {
+          setBusinessName(nameFromUrl);
         }
       }
 
+      // 5. Query server backend endpoint (works locally, in Cloud Run, and on Vercel)
       const response = await fetch('/api/extract-review-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim(), businessName }),
+        body: JSON.stringify({ url: rawUrl, businessName, district }),
       });
 
       if (response.ok) {
@@ -197,10 +218,10 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
         }
       }
 
-      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+      // 6. Resilient Fallback
+      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, placeId));
     } catch (_err) {
-      setFetchError('Direct review link search initialized.');
-      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, placeId));
     } finally {
       setIsAnalyzing(false);
     }
