@@ -38,7 +38,6 @@ import {
 import { NfcCardPreview } from './NfcCardPreview';
 import { CardTheme, NfcChipType, NfcBatchItem } from '../types';
 import { playNfcSuccessSound, playNfcTapSound } from '../utils/audio';
-import { deriveBusinessEmail } from '../utils/businessEmailUtils';
 import { deriveBusinessWebsite, cleanUrlPath } from '../utils/businessWebsiteUtils';
 
 interface App3NfcToolProps {
@@ -48,7 +47,6 @@ interface App3NfcToolProps {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
-    email?: string;
     websiteUrl?: string;
   } | null;
   onCardWritten: () => void;
@@ -107,11 +105,8 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
     records: { type: string; payload: string }[];
   } | null>(null);
 
-  // Auto-captured Business Email & Website state
-  const [capturedEmail, setCapturedEmail] = useState<string>('info@alsafadirestaurants.com');
+  // Auto-captured Business Website state
   const [capturedWebsite, setCapturedWebsite] = useState<string>('www.alsafadirestaurants.com');
-  const [emailInputVal, setEmailInputVal] = useState<string>('info@alsafadirestaurants.com');
-  const [emailSubjectVal, setEmailSubjectVal] = useState<string>('Customer Inquiry & Review');
 
   // WRITE tab records queue
   const [recordsQueue, setRecordsQueue] = useState<NfcRecordItem[]>([
@@ -123,15 +118,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
       fullUrl: 'https://search.google.com/local/writereview?placeid=ChIJ8_DXB_AlSafadiRigga',
       description: 'URL Record: Google Direct 5-Star Review',
       bytes: 68,
-    },
-    {
-      id: 'rec-2',
-      type: 'email',
-      protocolPrefix: 'mailto:',
-      value: 'info@alsafadirestaurants.com',
-      fullUrl: 'mailto:info@alsafadirestaurants.com',
-      description: 'Email Record: info@alsafadirestaurants.com (Auto-captured)',
-      bytes: 32,
     },
   ]);
 
@@ -180,12 +166,8 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
       if (initialPayload.businessName) setBusinessName(initialPayload.businessName);
       if (initialPayload.district) setDistrict(initialPayload.district);
 
-      const mail = initialPayload.email || deriveBusinessEmail(initialPayload.businessName);
       const site = initialPayload.websiteUrl || deriveBusinessWebsite(initialPayload.businessName);
-      setCapturedEmail(mail);
       setCapturedWebsite(site);
-      setEmailInputVal(mail);
-      setEmailSubjectVal(`Review & Inquiry - ${initialPayload.businessName}`);
 
       const newRecs: NfcRecordItem[] = [];
 
@@ -205,18 +187,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
           bytes: new TextEncoder().encode(initialPayload.targetUrl).length + 8,
         });
       }
-
-      // Auto-captured Email Record #2
-      const mailtoFull = `mailto:${mail}`;
-      newRecs.push({
-        id: `rec-email-${Date.now() + 1}`,
-        type: 'email',
-        protocolPrefix: 'mailto:',
-        value: mail,
-        fullUrl: mailtoFull,
-        description: `Email: ${mail} (Auto-captured)`,
-        bytes: new TextEncoder().encode(mailtoFull).length + 6,
-      });
 
       setRecordsQueue(newRecs);
       setActiveTab('write');
@@ -407,29 +377,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
     setIsAddRecordModalOpen(false);
     setSelectedRecordType(null);
     setTextInputValue('');
-  };
-
-  // Save Email record
-  const handleSaveEmailRecord = () => {
-    if (!emailInputVal.trim()) return;
-    const mailAddress = emailInputVal.trim();
-    const mailtoFull = emailSubjectVal.trim()
-      ? `mailto:${mailAddress}?subject=${encodeURIComponent(emailSubjectVal.trim())}`
-      : `mailto:${mailAddress}`;
-
-    const newRecord: NfcRecordItem = {
-      id: `rec-email-${Date.now()}`,
-      type: 'email',
-      protocolPrefix: 'mailto:',
-      value: mailAddress,
-      fullUrl: mailtoFull,
-      description: `Email: ${mailAddress}`,
-      bytes: new TextEncoder().encode(mailtoFull).length + 6,
-    };
-
-    setRecordsQueue((prev) => [...prev, newRecord]);
-    setIsAddRecordModalOpen(false);
-    setSelectedRecordType(null);
   };
 
   // Insert variable into URL field `{ID}`, `{SERIAL}`, `{COUNTER}`, `{DATE}`, `{WEBSITE}`
@@ -678,24 +625,21 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
               </div>
 
               {/* Auto-Captured Business Details Notification Bar */}
-              <div className="bg-[#110f22] border border-[#00b4d8]/40 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+              <div className="bg-[#110f22] border border-[#00b4d8]/40 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs shadow-lg">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-[#00b4d8]/20 text-[#00b4d8] flex items-center justify-center shrink-0">
                     <Globe className="w-4 h-4" />
                   </div>
-                  <div className="min-w-0 space-y-0.5">
+                  <div className="min-w-0">
                     <div className="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
-                      <span>Captured Website:</span>
+                      <span>Captured Business Website:</span>
                       <span className="text-[#00b4d8] font-mono font-bold bg-[#00b4d8]/10 px-2 py-0.5 rounded border border-[#00b4d8]/20">
                         {capturedWebsite}
                       </span>
                     </div>
-                    <div className="text-[11px] text-[#8e8aab] flex items-center gap-2 flex-wrap">
-                      <span>Business Email: <strong className="text-white font-mono">{capturedEmail}</strong></span>
-                    </div>
                   </div>
                 </div>
-                <span className="text-[10px] uppercase font-mono font-bold text-[#00b4d8] bg-[#00b4d8]/10 px-2.5 py-1 rounded-full border border-[#00b4d8]/30 shrink-0 self-start sm:self-auto">
+                <span className="text-[10px] uppercase font-mono font-bold text-[#00b4d8] bg-[#00b4d8]/10 px-2.5 py-1 rounded-full border border-[#00b4d8]/30 shrink-0">
                   Map Scout Synced
                 </span>
               </div>
@@ -1075,33 +1019,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 </div>
               </button>
 
-              {/* Email / Mailto Record */}
-              <button
-                type="button"
-                onClick={() => {
-                  setEmailInputVal(capturedEmail);
-                  setSelectedRecordType('email');
-                }}
-                className="w-full bg-[#110f22] border-2 border-[#00b4d8]/40 hover:border-[#00b4d8] rounded-2xl p-3.5 flex items-center justify-between text-left transition group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#00b4d8]/20 text-[#00b4d8] flex items-center justify-center shrink-0">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white group-hover:text-[#00b4d8] transition">
-                      Email / Mailto Record
-                    </div>
-                    <div className="text-[11px] text-[#8e8aab]">
-                      Auto-captured: {capturedEmail}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold text-[#00b4d8] bg-[#00b4d8]/10 px-2 py-1 rounded-lg">
-                  Auto-Captured
-                </span>
-              </button>
-
               {/* Social Networks */}
               <button
                 type="button"
@@ -1333,72 +1250,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 className="flex-1 py-2.5 rounded-xl bg-[#00b4d8] text-xs font-bold text-white shadow-md"
               >
                 OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 3.5: EMAIL RECORD FORM --- */}
-      {isAddRecordModalOpen && selectedRecordType === 'email' && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#161426] border-2 border-[#27233e] rounded-3xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[#27233e] pb-3">
-              <h3 className="font-black text-white text-sm flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#00b4d8]" />
-                <span>Add Email Record</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedRecordType(null)}
-                className="p-1 rounded-lg text-[#8e8aab] hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-[#8e8aab] uppercase tracking-wider block mb-1">
-                  Business Email Address
-                </label>
-                <input
-                  type="email"
-                  value={emailInputVal}
-                  onChange={(e) => setEmailInputVal(e.target.value)}
-                  placeholder="info@alsafadirestaurants.com"
-                  className="w-full bg-[#110f22] border border-[#27233e] focus:border-[#00b4d8] rounded-xl p-3 text-xs text-white font-mono outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#8e8aab] uppercase tracking-wider block mb-1">
-                  Default Subject (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={emailSubjectVal}
-                  onChange={(e) => setEmailSubjectVal(e.target.value)}
-                  placeholder="Review Inquiry"
-                  className="w-full bg-[#110f22] border border-[#27233e] focus:border-[#00b4d8] rounded-xl p-3 text-xs text-white outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedRecordType(null)}
-                className="flex-1 py-2.5 rounded-xl bg-[#110f22] text-xs font-bold text-[#8e8aab] border border-[#27233e]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEmailRecord}
-                className="flex-1 py-2.5 rounded-xl bg-[#00b4d8] text-xs font-bold text-white shadow-md hover:bg-[#0096b4] transition"
-              >
-                OK / Add Email
               </button>
             </div>
           </div>

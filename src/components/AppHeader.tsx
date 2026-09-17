@@ -55,33 +55,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 Dubai Metro
               </span>
             </div>
-
-            {/* Stepper Breadcrumb Subtitle */}
-            <div className="flex items-center gap-1.5 text-[12px] text-[#8e8aab] mt-0.5 font-medium">
-              <button
-                type="button"
-                onClick={() => setActiveTab('scout')}
-                className={`hover:text-white transition-colors ${activeTab === 'scout' ? 'text-[#ff5c8a] font-semibold' : ''}`}
-              >
-                Map Scout
-              </button>
-              <span className="text-[#514d69]">➔</span>
-              <button
-                type="button"
-                onClick={() => setActiveTab('generator')}
-                className={`hover:text-white transition-colors ${activeTab === 'generator' ? 'text-[#ff5c8a] font-semibold' : ''}`}
-              >
-                Product Mate
-              </button>
-              <span className="text-[#514d69]">➔</span>
-              <button
-                type="button"
-                onClick={() => setActiveTab('nfc')}
-                className={`hover:text-white transition-colors ${activeTab === 'nfc' ? 'text-[#ff5c8a] font-semibold' : ''}`}
-              >
-                NFC Writer
-              </button>
-            </div>
           </div>
         </div>
 

@@ -346,21 +346,21 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
             >
               <TrainFront className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <h3 className="text-[15px] font-bold text-white tracking-tight shrink-0">
                   {parsedCurrentStation.displayName}
                 </h3>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0 ${
                     parsedCurrentStation.isInterchange
-                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] text-white'
+                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] text-white shadow-sm'
                       : parsedCurrentStation.isGreen
                       ? 'bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40'
                       : 'bg-[#ff3366]/20 text-[#ff708f] border border-[#ff3366]/40'
                   }`}
                 >
-                  {parsedCurrentStation.lineLabel}
+                  {parsedCurrentStation.isInterchange ? 'Red & Green Interchange' : parsedCurrentStation.lineLabel}
                 </span>
               </div>
               <p className="text-[11px] text-[#8e8aab] truncate mt-0.5">

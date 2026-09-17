@@ -16,7 +16,6 @@ import {
   Globe,
 } from 'lucide-react';
 import { BusinessLead } from '../types';
-import { deriveBusinessEmail } from '../utils/businessEmailUtils';
 import { deriveBusinessWebsite } from '../utils/businessWebsiteUtils';
 import {
   isValidPlaceId,
@@ -33,7 +32,6 @@ interface App2ProductMateProps {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
-    email?: string;
     websiteUrl?: string;
   }) => void;
 }
@@ -57,9 +55,6 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   );
   const [instagramHandle, setInstagramHandle] = useState<string>(
     initialLead?.instagramHandle || 'alsafadirestaurants'
-  );
-  const [businessEmail, setBusinessEmail] = useState<string>(
-    initialLead?.email || deriveBusinessEmail(initialLead?.name || 'Al Safadi Restaurant')
   );
   const [businessWebsite, setBusinessWebsite] = useState<string>(
     initialLead?.websiteUrl || deriveBusinessWebsite(initialLead?.name || 'Al Safadi Restaurant')
@@ -94,7 +89,6 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       setBusinessName(initialLead.name || 'Dubai Business');
       setDistrict(initialLead.district || 'Dubai');
       setInstagramHandle(initialLead.instagramHandle || 'dubaibusiness');
-      setBusinessEmail(initialLead.email || deriveBusinessEmail(initialLead.name));
       setBusinessWebsite(initialLead.websiteUrl || deriveBusinessWebsite(initialLead.name));
       setSuccessBanner(`Loaded ${initialLead.name} from Map Scout`);
 
@@ -234,7 +228,6 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       targetUrl,
       type: isGoogle ? 'google_review' : 'instagram',
       instagramHandle: isGoogle ? undefined : instagramHandle.replace(/^@/, ''),
-      email: businessEmail || deriveBusinessEmail(businessName),
       websiteUrl: businessWebsite || deriveBusinessWebsite(businessName),
     });
   };
@@ -293,51 +286,55 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
         )}
 
         {/* Mode Toggle: Google Review vs Instagram NFC */}
-        <div className="mt-5 pt-4 border-t border-[#26223e] flex items-center gap-2.5">
-          <button
-            onClick={() => setMode('google')}
-            className={`flex-1 py-2.5 px-3 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
-              mode === 'google'
-                ? 'bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white border-transparent shadow-lg shadow-[#ec1a65]/20'
-                : 'bg-[#110f22] text-[#8e8aab] border-[#26223d] hover:text-white hover:bg-[#1a172e]'
-            }`}
-          >
-            <div className="flex items-center font-black text-[11px] tracking-tight mr-1">
-              <span className="text-blue-400">G</span>
-              <span className="text-red-400">o</span>
-              <span className="text-amber-400">o</span>
-              <span className="text-emerald-400">g</span>
-            </div>
-            <span>Google 5-Star Review NFC</span>
-          </button>
+        <div className="mt-5 pt-4 border-t border-[#26223e]">
+          <div className="p-1.5 bg-[#110f22] border border-[#26223d] rounded-2xl flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setMode('google')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border ${
+                mode === 'google'
+                  ? 'bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white border-transparent shadow-md shadow-[#ec1a65]/20'
+                  : 'text-[#8e8aab] border-transparent hover:text-white hover:bg-[#1a172e]'
+              }`}
+            >
+              <div className="flex items-center font-black text-xs tracking-tight shrink-0">
+                <span className="text-blue-400">G</span>
+                <span className="text-red-400">o</span>
+                <span className="text-amber-400">o</span>
+                <span className="text-emerald-400">g</span>
+              </div>
+              <span className="whitespace-nowrap">Google 5★ Review</span>
+            </button>
 
-          <button
-            onClick={() => setMode('instagram')}
-            className={`flex-1 py-2.5 px-3 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
-              mode === 'instagram'
-                ? 'bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white border-transparent shadow-lg shadow-[#ec1a65]/20'
-                : 'bg-[#110f22] text-[#8e8aab] border-[#26223d] hover:text-white hover:bg-[#1a172e]'
-            }`}
-          >
-            <Instagram className="w-3.5 h-3.5 text-pink-400" />
-            <span>Instagram Follow NFC</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setMode('instagram')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border ${
+                mode === 'instagram'
+                  ? 'bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white border-transparent shadow-md shadow-[#ec1a65]/20'
+                  : 'text-[#8e8aab] border-transparent hover:text-white hover:bg-[#1a172e]'
+              }`}
+            >
+              <Instagram className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+              <span className="whitespace-nowrap">Instagram Follow</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* FORM INPUTS & GENERATOR SECTION */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column: Link Inputs */}
-        <div className="md:col-span-7 flex flex-col gap-5">
-          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 flex flex-col gap-4 shadow-2xl">
+        <div className="lg:col-span-7 flex flex-col gap-5 min-w-0">
+          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-2xl">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#8e8aab] flex items-center gap-1.5">
-              <Link2 className="w-3.5 h-3.5 text-[#ec1a65]" />
+              <Link2 className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
               <span>Step 1: Input Business Details</span>
             </h3>
 
             {/* Business Name and District */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-[11px] font-semibold text-[#8e8aab] mb-1.5">
                   Business Name
                 </label>
@@ -346,11 +343,11 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g. Marina Breeze Bakery"
-                  className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition"
+                  className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label className="block text-[11px] font-semibold text-[#8e8aab] mb-1.5">
                   Dubai Area / District
                 </label>
@@ -359,50 +356,32 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
                   placeholder="e.g. Dubai Marina"
-                  className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition"
+                  className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                 />
               </div>
             </div>
 
-            {/* Business Email Address (Auto-captured for Tab 3) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11px] font-semibold text-[#8e8aab] flex items-center gap-1">
-                  <Mail className="w-3 h-3 text-[#00b4d8]" />
-                  <span>Business Email Address (Auto-Captured for NFC)</span>
-                </label>
-                <span className="text-[10px] text-[#00b4d8] font-mono">NFC Record #2</span>
-              </div>
-              <input
-                type="email"
-                value={businessEmail}
-                onChange={(e) => setBusinessEmail(e.target.value)}
-                placeholder="info@alsafadirestaurants.com"
-                className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#00b4d8] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono"
-              />
-            </div>
-
             {/* Business Website URL (Auto-captured from Tab 1 for NFC) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11px] font-semibold text-[#8e8aab] flex items-center gap-1">
-                  <Globe className="w-3 h-3 text-[#ec1a65]" />
-                  <span>Business Website Domain (Auto-Captured from Map Scout)</span>
+            <div className="min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                <label className="text-[11px] font-semibold text-[#8e8aab] flex items-center gap-1 min-w-0">
+                  <Globe className="w-3 h-3 text-[#ec1a65] shrink-0" />
+                  <span className="truncate">Business Website Domain</span>
                 </label>
-                <span className="text-[10px] text-[#ec1a65] font-mono">Auto-Synced</span>
+                <span className="text-[10px] text-[#ec1a65] font-mono shrink-0">Auto-Synced</span>
               </div>
               <input
                 type="text"
                 value={businessWebsite}
                 onChange={(e) => setBusinessWebsite(e.target.value)}
                 placeholder="www.alsafadirestaurants.com"
-                className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono"
+                className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono min-w-0"
               />
             </div>
 
             {mode === 'google' ? (
               /* Google Maps Link Box */
-              <div>
+              <div className="min-w-0">
                 <label className="block text-[11px] font-semibold text-[#8e8aab] mb-1.5">
                   Google Maps Link or Search Link
                 </label>
@@ -412,7 +391,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                     value={mapLinkInput}
                     onChange={(e) => setMapLinkInput(e.target.value)}
                     placeholder="Paste Google Maps URL (e.g. https://maps.app.goo.gl/...)"
-                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition"
+                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                   />
                 </div>
 
@@ -429,14 +408,14 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                     disabled={isAnalyzing || !mapLinkInput}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-semibold transition border border-[#26223d] disabled:opacity-40"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-[#ec1a65]" />
+                    <Sparkles className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
                     <span>{isAnalyzing ? 'Generating Review URL...' : 'Generate Review URL'}</span>
                   </button>
                 </div>
               </div>
             ) : (
               /* Instagram Handle Box */
-              <div>
+              <div className="min-w-0">
                 <label className="block text-[11px] font-semibold text-[#8e8aab] mb-1.5">
                   Instagram Handle or Profile Link
                 </label>
@@ -447,7 +426,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                     value={instagramHandle.replace(/^@/, '')}
                     onChange={(e) => setInstagramHandle(e.target.value)}
                     placeholder="marinabreeze.ae"
-                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition"
+                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                   />
                 </div>
               </div>
@@ -455,25 +434,25 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
           </div>
 
           {/* Generated Result Box */}
-          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 flex flex-col gap-4 shadow-2xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-2xl relative overflow-hidden min-w-0">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs font-bold text-[#ff5c8a] uppercase tracking-wider flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#10b981]" />
+                <CheckCircle2 className="w-4 h-4 text-[#10b981] shrink-0" />
                 <span>Generated NFC Payload URL</span>
               </span>
-              <span className="text-[10px] font-mono text-[#34d399] bg-[#102a20] px-2.5 py-0.5 rounded-full border border-[#059669]/40">
+              <span className="text-[10px] font-mono text-[#34d399] bg-[#102a20] px-2.5 py-0.5 rounded-full border border-[#059669]/40 shrink-0">
                 Ready for NFC Tag
               </span>
             </div>
 
             {/* Display Target URL */}
-            <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-4 flex flex-col gap-2">
-              <div className="flex items-center justify-between text-[11px] text-[#8e8aab]">
+            <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-4 flex flex-col gap-2 min-w-0">
+              <div className="flex items-center justify-between gap-2 text-[11px] text-[#8e8aab] flex-wrap">
                 <span className="font-semibold">
                   {mode === 'google' ? 'Google 5-Star Review Write URL:' : 'Instagram Direct Follow URL:'}
                 </span>
                 {mode === 'google' && isValidPlaceId(placeId) && (
-                  <span className="text-[10px] font-mono text-[#ff5c8a] bg-[#381423] px-2 py-0.5 rounded-lg border border-[#ec1a65]/30">
+                  <span className="text-[10px] font-mono text-[#ff5c8a] bg-[#381423] px-2 py-0.5 rounded-lg border border-[#ec1a65]/30 shrink-0">
                     Place ID: {placeId}
                   </span>
                 )}
@@ -540,29 +519,29 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
               <button
                 onClick={handleTransferToNfc}
                 disabled={mode === 'google' && !generatedReviewUrl}
-                className="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#00a8f3] hover:opacity-95 text-white font-bold text-xs transition shadow-lg shadow-[#ec1a65]/25 ml-auto disabled:opacity-40"
+                className="w-full sm:w-auto flex-1 min-w-[180px] flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#00a8f3] hover:opacity-95 text-white font-bold text-xs transition shadow-lg shadow-[#ec1a65]/25 disabled:opacity-40"
               >
                 <span>Send to NFC Tool (App 3)</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Right Column: Explainer & Dual QR Code Preview */}
-        <div className="md:col-span-5 flex flex-col gap-5">
+        <div className="lg:col-span-5 flex flex-col gap-5 min-w-0">
           {/* Dual QR Code Display */}
-          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 flex flex-col items-center text-center shadow-2xl">
-            <div className="flex items-center justify-between w-full mb-4">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <QrCode className="w-3.5 h-3.5 text-[#ec1a65]" />
-                Dual NFC + QR Card Print Preview
+          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-6 flex flex-col items-center text-center shadow-2xl min-w-0">
+            <div className="flex items-center justify-between w-full mb-4 gap-2">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5 min-w-0">
+                <QrCode className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
+                <span className="truncate">Dual NFC + QR Preview</span>
               </span>
-              <span className="text-[10px] text-[#8e8aab] font-mono">High-Res</span>
+              <span className="text-[10px] text-[#8e8aab] font-mono shrink-0">High-Res</span>
             </div>
 
             {/* QR Card Graphic */}
-            <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-md flex items-center justify-center">
+            <div className="w-full max-w-[180px] sm:max-w-[200px] aspect-square bg-white p-3 rounded-2xl shadow-md flex items-center justify-center mx-auto shrink-0">
               {qrCodeDataUrl ? (
                 <img
                   src={qrCodeDataUrl}
@@ -577,7 +556,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
               )}
             </div>
 
-            <p className="text-[11px] text-[#8e8aab] mt-3 leading-relaxed">
+            <p className="text-[11px] text-[#8e8aab] mt-3 leading-relaxed max-w-xs">
               Dual NFC + QR cards allow 100% of customers in Dubai to scan and review instantly.
             </p>
 
@@ -593,10 +572,10 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
           </div>
 
           {/* Value Pitch Explainer Box */}
-          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 text-xs text-[#8e8aab] space-y-2.5 shadow-2xl">
+          <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-5 text-xs text-[#8e8aab] space-y-2.5 shadow-2xl min-w-0">
             <h4 className="font-bold text-white flex items-center gap-1.5 text-xs">
-              <ShieldCheck className="w-4 h-4 text-[#10b981]" />
-              Why Product Mate Review Links Convert 3x Higher:
+              <ShieldCheck className="w-4 h-4 text-[#10b981] shrink-0" />
+              <span>Why Review Links Convert 3x Higher:</span>
             </h4>
             <p className="text-[#8e8aab] text-[11px] leading-relaxed">
               The <span className="text-[#ff5c8a] font-mono">/local/writereview</span> format opens the native Google review rating screen with 5 stars highlighted immediately on iOS & Android!

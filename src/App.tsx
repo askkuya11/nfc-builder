@@ -15,7 +15,6 @@ export default function App() {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
-    email?: string;
     websiteUrl?: string;
   } | null>(null);
   const [writtenCount, setWrittenCount] = useState<number>(3);
@@ -34,7 +33,6 @@ export default function App() {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
-    email?: string;
     websiteUrl?: string;
   }) => {
     setNfcPayload(payload);

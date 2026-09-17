@@ -24,7 +24,6 @@ export interface BusinessLead {
   district: string;
   address: string;
   phone: string;
-  email?: string;
   websiteUrl?: string;
   placeId: string;
   mapsUrl: string;
