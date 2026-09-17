@@ -117,9 +117,9 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     }
   }, [instagramHandle]);
 
-  // Fallback link builder if generatedReviewUrl is missing or uses maps search format
+  // Fallback link builder if generatedReviewUrl is missing or has old stub placeId
   useEffect(() => {
-    if (!generatedReviewUrl || generatedReviewUrl.includes('ChIJ8_DXB_AlSafadiRigga') || generatedReviewUrl.includes('google.com/maps/search')) {
+    if (!generatedReviewUrl || generatedReviewUrl.includes('ChIJ8_DXB_AlSafadiRigga')) {
       setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, placeId));
     }
   }, [businessName, district, placeId, generatedReviewUrl]);
