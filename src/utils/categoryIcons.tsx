@@ -351,7 +351,7 @@ export function getCategoryVisualMeta(category?: string, name?: string): Categor
         // Storefront SVG
         pinSvg: `<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path><path d="M2 7h20"></path>`,
         pinColor: '#f59e0b',
-        pinBgClass: 'bg-slate-900 border-amber-500/80 text-amber-300 shadow-amber-500/20',
+        pinBgClass: 'bg-[#101019] border-amber-500/80 text-amber-300 shadow-amber-500/20',
         borderClass: 'border-amber-500',
         badgeBgClass: 'bg-amber-500/15 border-amber-500/30',
         badgeTextClass: 'text-amber-400',

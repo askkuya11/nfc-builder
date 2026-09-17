@@ -1,62 +1,37 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BusinessLead, GisIndoorBusiness } from '../types';
-import { REAL_DUBAI_BUSINESSES } from '../data/realDubaiBusinesses';
-import { GmbAuditOverlay } from './GmbAuditOverlay';
-import { GmbEverywhereImporterModal } from './GmbEverywhereImporterModal';
+import {
+  REAL_DUBAI_BUSINESSES,
+  DUBAI_METRO_STATIONS,
+  DUBAI_GENERAL_DISTRICTS,
+  DUBAI_DISTRICTS,
+} from '../data/realDubaiBusinesses';
+export { DUBAI_METRO_STATIONS, DUBAI_GENERAL_DISTRICTS, DUBAI_DISTRICTS };
 import { generateGmbAudit } from '../utils/gmbEverywhereAudit';
 import { RealInteractiveRadarMap } from './RealInteractiveRadarMap';
 import { GisBuildingModal } from './GisBuildingModal';
+import { MobileFilterSheet } from './MobileFilterSheet';
+import { StationPickerSheet, parseStationInfo } from './StationPickerSheet';
 import { generateGisBuildingData } from '../utils/gisDubaiDirectory';
 import {
-  CategoryBadge,
-  getCategoryVisualMeta,
-  detectBusinessCategory,
-} from '../utils/categoryIcons';
-import {
   Search,
-  MapPin,
   Star,
-  ExternalLink,
-  Copy,
-  Check,
-  Phone,
-  MessageSquare,
-  Sparkles,
-  Download,
-  Filter,
-  Layers,
-  Flame,
+  SlidersHorizontal,
   ArrowRight,
-  RefreshCw,
-  Navigation,
-  Radio,
-  Crosshair,
-  Compass,
-  Eye,
-  LocateFixed,
-  FileSpreadsheet,
-  Gauge,
-  UploadCloud,
-  Clock,
-  UserCheck,
-  PhoneCall,
-  Edit3,
-  UserPlus,
-  Save,
-  FileText,
-  ZoomIn,
-  ZoomOut,
-  Footprints,
-  Route,
-  Maximize2,
-  Minimize2,
-  Building2,
-  DoorOpen,
+  Check,
   ChevronDown,
   ChevronUp,
-  LayoutGrid,
-  Map,
-  Columns,
+  TrainFront,
+  Store,
+  Flame,
+  Scissors,
+  Coffee,
+  Sparkles,
+  Utensils,
+  Stethoscope,
+  Wrench,
+  Dumbbell,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface App1MapScoutProps {
@@ -64,95 +39,32 @@ interface App1MapScoutProps {
   selectedLeadId?: string;
 }
 
-export const DUBAI_METRO_STATIONS = [
-  'Al Rigga (Red Line)',
-  'DCC Area / Deira City Centre (Red Line)',
-  'Union Metro (Red & Green Line Interchange)',
-  'Salah Al Din (Green Line)',
-  'BurJuman (Red & Green Line Interchange)',
-  'Baniyas Square (Green Line)',
-  'Abu Baker Al Siddique (Green Line)',
-  'Al Fahidi / Meena Bazaar (Green Line)',
-  'ADCB / Karama (Red Line)',
-  'Business Bay (Red Line)',
-  'Mall of the Emirates / MOE (Red Line)',
-  'DMCC / JLT (Red Line)',
-  'Sobha Realty / Dubai Marina (Red Line)',
-];
-
-export const DUBAI_GENERAL_DISTRICTS = [
-  'All Dubai',
-  'Deira',
-  'Downtown Dubai',
-  'Dubai Marina',
-  'JBR (Jumeirah Beach Residence)',
-  'Al Barsha',
-  'JLT (Jumeirah Lake Towers)',
-  'Karama',
-  'Palm Jumeirah',
-  'Dubai Hills',
-];
-
-export const DUBAI_DISTRICTS = [
-  ...DUBAI_METRO_STATIONS,
-  ...DUBAI_GENERAL_DISTRICTS,
-];
-
-const CATEGORIES = [
-  'All Categories',
-  'Dental Clinic',
-  'Restaurants & Cafes',
-  "Men's Barbershops & Gents Salons",
-  'Ladies Salons & Spas',
-  'Clinics & Healthcare',
-  'Retail & Boutiques',
-  'Automotive',
-  'Fitness & Gyms',
-];
-
 export const DISTRICT_CENTERS: Record<string, { lat: number; lng: number; sectorName: string; landmark: string }> = {
-  // Metro Stations (Red & Green Lines)
   'Al Rigga (Red Line)': { lat: 25.2635, lng: 55.3245, sectorName: 'RED LINE • AL RIGGA ROAD CORRIDOR', landmark: 'Al Rigga Metro & Al Ghurair Centre' },
   'Al Rigga': { lat: 25.2635, lng: 55.3245, sectorName: 'RED LINE • AL RIGGA ROAD CORRIDOR', landmark: 'Al Rigga Metro & Al Ghurair Centre' },
-
   'DCC Area / Deira City Centre (Red Line)': { lat: 25.2532, lng: 55.3330, sectorName: 'RED LINE • DEIRA CITY CENTRE (DCC) SECTOR', landmark: 'DCC Metro, Pullman Hotel & Port Saeed' },
   'DCC Area': { lat: 25.2532, lng: 55.3330, sectorName: 'RED LINE • DEIRA CITY CENTRE (DCC) SECTOR', landmark: 'DCC Metro, Pullman Hotel & Port Saeed' },
   'Deira City Centre': { lat: 25.2532, lng: 55.3330, sectorName: 'RED LINE • DEIRA CITY CENTRE (DCC) SECTOR', landmark: 'DCC Metro, Pullman Hotel & Port Saeed' },
-
   'Union Metro (Red & Green Line Interchange)': { lat: 25.2662, lng: 55.3130, sectorName: 'RED & GREEN LINE • UNION INTERCHANGE HUB', landmark: 'Union Metro Square, Al Maktoum Road & Creek' },
   'Union Metro': { lat: 25.2662, lng: 55.3130, sectorName: 'RED & GREEN LINE • UNION INTERCHANGE HUB', landmark: 'Union Metro Square, Al Maktoum Road & Creek' },
   'Union': { lat: 25.2662, lng: 55.3130, sectorName: 'RED & GREEN LINE • UNION INTERCHANGE HUB', landmark: 'Union Metro Square, Al Maktoum Road & Creek' },
-
   'Salah Al Din (Green Line)': { lat: 25.2692, lng: 55.3280, sectorName: 'GREEN LINE • SALAH AL DIN SECTOR', landmark: 'Salah Al Din Metro, Reef Mall & Muraqqabat' },
   'Salah Al Din': { lat: 25.2692, lng: 55.3280, sectorName: 'GREEN LINE • SALAH AL DIN SECTOR', landmark: 'Salah Al Din Metro, Reef Mall & Muraqqabat' },
-  'Salah Aldin': { lat: 25.2692, lng: 55.3280, sectorName: 'GREEN LINE • SALAH AL DIN SECTOR', landmark: 'Salah Al Din Metro, Reef Mall & Muraqqabat' },
-
   'BurJuman (Red & Green Line Interchange)': { lat: 25.2528, lng: 55.3025, sectorName: 'RED & GREEN LINE • BURJUMAN INTERCHANGE', landmark: 'BurJuman Metro, Bank Street & Trade Area' },
   'BurJuman': { lat: 25.2528, lng: 55.3025, sectorName: 'RED & GREEN LINE • BURJUMAN INTERCHANGE', landmark: 'BurJuman Metro, Bank Street & Trade Area' },
-
   'Baniyas Square (Green Line)': { lat: 25.2680, lng: 55.3060, sectorName: 'GREEN LINE • BANIYAS SQUARE SECTOR', landmark: 'Baniyas Square Metro, Nasser Sq & Wholesale Market' },
   'Baniyas Square': { lat: 25.2680, lng: 55.3060, sectorName: 'GREEN LINE • BANIYAS SQUARE SECTOR', landmark: 'Baniyas Square Metro, Nasser Sq & Wholesale Market' },
-
   'Abu Baker Al Siddique (Green Line)': { lat: 25.2660, lng: 55.3370, sectorName: 'GREEN LINE • ABU BAKER AL SIDDIQUE SECTOR', landmark: 'Abu Baker Metro & Salahuddin Commercial Strip' },
   'Abu Baker Al Siddique': { lat: 25.2660, lng: 55.3370, sectorName: 'GREEN LINE • ABU BAKER AL SIDDIQUE SECTOR', landmark: 'Abu Baker Metro & Salahuddin Commercial Strip' },
-
   'Al Fahidi / Meena Bazaar (Green Line)': { lat: 25.2568, lng: 55.2970, sectorName: 'GREEN LINE • AL FAHIDI / MEENA BAZAAR', landmark: 'Al Fahidi Metro, Meena Bazaar & Textile Market' },
   'Al Fahidi': { lat: 25.2568, lng: 55.2970, sectorName: 'GREEN LINE • AL FAHIDI / MEENA BAZAAR', landmark: 'Al Fahidi Metro, Meena Bazaar & Textile Market' },
-
   'ADCB / Karama (Red Line)': { lat: 25.2480, lng: 55.3020, sectorName: 'RED LINE • ADCB / AL KARAMA SECTOR', landmark: 'ADCB Metro & Karama Food District' },
   'ADCB': { lat: 25.2480, lng: 55.3020, sectorName: 'RED LINE • ADCB / AL KARAMA SECTOR', landmark: 'ADCB Metro & Karama Food District' },
-
   'Business Bay (Red Line)': { lat: 25.1837, lng: 55.2666, sectorName: 'RED LINE • BUSINESS BAY SECTOR', landmark: 'Business Bay Metro & Dubai Canal' },
   'Business Bay': { lat: 25.1837, lng: 55.2666, sectorName: 'RED LINE • BUSINESS BAY SECTOR', landmark: 'Business Bay Metro & Dubai Canal' },
-
   'Mall of the Emirates / MOE (Red Line)': { lat: 25.1180, lng: 55.2000, sectorName: 'RED LINE • MALL OF THE EMIRATES / BARSHA', landmark: 'MOE Metro & Barsha Commercial Hub' },
-
   'DMCC / JLT (Red Line)': { lat: 25.0740, lng: 55.1460, sectorName: 'RED LINE • DMCC / JLT HIGH-RISE SECTOR', landmark: 'DMCC Metro & Lake Towers' },
-  'JLT (Jumeirah Lake Towers)': { lat: 25.0740, lng: 55.1460, sectorName: 'RED LINE • DMCC / JLT HIGH-RISE SECTOR', landmark: 'DMCC Metro & Lake Towers' },
-
   'Sobha Realty / Dubai Marina (Red Line)': { lat: 25.0805, lng: 55.1403, sectorName: 'RED LINE • SOBHA REALTY / MARINA SECTOR', landmark: 'Sobha Realty Metro & Marina Walk' },
-
-  // General Districts
   'All Dubai': { lat: 25.2048, lng: 55.2708, sectorName: 'GREATER DUBAI METROPOLITAN', landmark: 'Dubai Central Hub' },
   'Dubai Marina': { lat: 25.0805, lng: 55.1403, sectorName: 'DUBAI MARINA & JBR SECTOR', landmark: 'Marina Promenade & Walk' },
   'Downtown Dubai': { lat: 25.1972, lng: 55.2744, sectorName: 'DOWNTOWN & FINANCIAL CORRIDOR', landmark: 'Burj Khalifa & DIFC' },
@@ -175,51 +87,80 @@ export const resolveDistrictCenter = (districtName: string) => {
   return DISTRICT_CENTERS['Al Rigga (Red Line)'];
 };
 
+const CATEGORIES = [
+  { label: 'Barbershop', value: "Men's Barbershops & Gents Salons", icon: Scissors },
+  { label: 'Cafes', value: 'Restaurants & Cafes', icon: Coffee },
+  { label: 'Ladies Salon', value: 'Ladies Salons & Spas', icon: Sparkles },
+  { label: 'Restaurants', value: 'Restaurants & Cafes', icon: Utensils },
+  { label: 'Dental Clinic', value: 'Dental Clinic', icon: Stethoscope },
+  { label: 'Automotive', value: 'Automotive', icon: Wrench },
+  { label: 'Gyms', value: 'Fitness & Gyms', icon: Dumbbell },
+  { label: 'Retail', value: 'Retail & Boutiques', icon: ShoppingBag },
+];
+
 export const App1MapScout: React.FC<App1MapScoutProps> = ({
   onSelectLead,
   selectedLeadId,
 }) => {
   const [district, setDistrict] = useState<string>('Al Rigga (Red Line)');
-  const [category, setCategory] = useState<string>('All Categories');
-  const [reviewFilter, setReviewFilter] = useState<string>('sweet_spot'); // 10-100 reviews
+  const [category, setCategory] = useState<string>("Men's Barbershops & Gents Salons");
+  const [reviewFilter, setReviewFilter] = useState<string>('sweet_spot');
   const [sortBy, setSortBy] = useState<'nearest' | 'sweet_spot' | 'reviews_asc' | 'rating_desc' | 'name_asc'>('nearest');
-  const [extractCount, setExtractCount] = useState<number>(20);
-  const [customSearch, setCustomSearch] = useState<string>('');
-  
+  const [customSearch, setCustomSearch] = useState<string>('barber');
+  const [stationLineFilter, setStationLineFilter] = useState<'all' | 'red' | 'green'>('all');
+  const [stationQuickSearch, setStationQuickSearch] = useState<string>('');
+  const [scoutAdjacentCorridor, setScoutAdjacentCorridor] = useState<boolean>(true);
+  const [targetCount, setTargetCount] = useState<number>(50);
+
   const [leads, setLeads] = useState<BusinessLead[]>(() => {
-    const initial = REAL_DUBAI_BUSINESSES.filter(b => b.district.includes('Al Rigga') || b.district === 'Deira').slice(0, 25);
-    const sourceList = initial.length > 0 ? initial : REAL_DUBAI_BUSINESSES.slice(0, 25);
+    const initial = REAL_DUBAI_BUSINESSES.filter(b => b.district.includes('Al Rigga') || b.district === 'Deira').slice(0, 35);
+    const sourceList = initial.length > 0 ? initial : REAL_DUBAI_BUSINESSES.slice(0, 35);
     return sourceList.map(b => ({
       ...b,
       audit: generateGmbAudit(b as any),
+      buildingInfo: generateGisBuildingData(b as any),
     })) as BusinessLead[];
   });
-  const [totalMatched, setTotalMatched] = useState<number>(() => {
-    return REAL_DUBAI_BUSINESSES.filter(b => b.district.includes('Al Rigga') || b.district === 'Deira').length || 25;
-  });
-  const [totalInDistrict, setTotalInDistrict] = useState<number>(25);
-  const [totalInDistrictCategory, setTotalInDistrictCategory] = useState<number>(25);
 
-  const [leadSource, setLeadSource] = useState<string>('real_verified_dubai_places');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'map' | 'split'>('list');
-  const [filtersCollapsed, setFiltersCollapsed] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [activeLeadOnMap, setActiveLeadOnMap] = useState<BusinessLead | null>(null);
-  const [radarScanning, setRadarScanning] = useState<boolean>(true);
-  const [radarCategoryFilter, setRadarCategoryFilter] = useState<'all' | 'barbershop' | 'dental' | 'high_need'>('all');
   const [mapEngine, setMapEngine] = useState<'google' | '2gis'>('google');
-  const [radarZoom, setRadarZoom] = useState<number>(1);
   const [showRouteTrail, setShowRouteTrail] = useState<boolean>(true);
   const [routeMaxStops, setRouteMaxStops] = useState<number>(10);
-  const [isImporterOpen, setIsImporterOpen] = useState<boolean>(false);
-  const [auditOverlayEnabled, setAuditOverlayEnabled] = useState<boolean>(true);
-  const [resultSearchQuery, setResultSearchQuery] = useState<string>('');
+  const [radarCategoryFilter, setRadarCategoryFilter] = useState<'all' | 'barbershop' | 'dental' | 'high_need'>('all');
+
+  // Expanded pitch details state per lead
+  const [expandedPitchId, setExpandedPitchId] = useState<string | null>(null);
+
+  // Modal sheets
+  const [isStationSheetOpen, setIsStationSheetOpen] = useState<boolean>(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState<boolean>(false);
 
   // 2GIS Building & Entrance Directory modal state
   const [gisModalLead, setGisModalLead] = useState<BusinessLead | null>(null);
   const [isGisModalOpen, setIsGisModalOpen] = useState<boolean>(false);
+
+  const parsedCurrentStation = useMemo(() => {
+    return parseStationInfo(district);
+  }, [district]);
+
+  // Quick Station List for the in-card selector
+  const quickStations = useMemo(() => {
+    let list = DUBAI_METRO_STATIONS;
+    if (stationLineFilter === 'red') {
+      list = list.filter((s) => s.includes('Red Line') || s.includes('Red & Green'));
+    } else if (stationLineFilter === 'green') {
+      list = list.filter((s) => s.includes('Green Line') || s.includes('Red & Green'));
+    }
+
+    if (stationQuickSearch.trim()) {
+      const q = stationQuickSearch.toLowerCase();
+      list = list.filter((s) => s.toLowerCase().includes(q));
+    }
+    return list;
+  }, [stationLineFilter, stationQuickSearch]);
 
   const openGisModal = (lead: BusinessLead) => {
     if (!lead.buildingInfo) {
@@ -250,7 +191,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         mapsUrl: `https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6`,
         directReviewUrl: `https://search.google.com/local/writereview?placeid=${coTenant.id}`,
         pitchOpportunity: coTenant.pitchOpportunity || 'high',
-        pitchAngle: `High-value co-tenant inside ${bName}. Located at ${coTenant.floor}, Unit ${coTenant.unitNumber}. On same walking corridor!`,
+        pitchAngle: `High-value co-tenant inside ${bName}. Located at ${coTenant.floor}, Unit ${coTenant.unitNumber}.`,
         lat: parentLead?.lat,
         lng: parentLead?.lng,
         footsteps: parentLead?.footsteps,
@@ -265,77 +206,8 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
     setIsGisModalOpen(false);
   };
 
-  // Editable decision maker contact state
-  const [editingLeadForContact, setEditingLeadForContact] = useState<BusinessLead | null>(null);
-  const [editContactName, setEditContactName] = useState<string>('');
-  const [editContactRole, setEditContactRole] = useState<string>('');
-  const [editContactPhone, setEditContactPhone] = useState<string>('');
-  const [editContactNotes, setEditContactNotes] = useState<string>('');
-  const [contactSaveToast, setContactSaveToast] = useState<string | null>(null);
-
-  const openContactEditor = (lead: BusinessLead) => {
-    setEditingLeadForContact(lead);
-    setEditContactName(lead.contactPersonName || '');
-    setEditContactRole(lead.contactPersonRole || 'Owner & Decision Maker');
-    setEditContactPhone(lead.contactDirectPhone || lead.phone || '');
-    setEditContactNotes(lead.notes || '');
-  };
-
-  const handleSaveContact = () => {
-    if (!editingLeadForContact) return;
-
-    const customData = {
-      contactPersonName: editContactName.trim(),
-      contactPersonRole: editContactRole.trim(),
-      contactDirectPhone: editContactPhone.trim(),
-      notes: editContactNotes.trim(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    try {
-      const savedCustomContactsRaw = localStorage.getItem('dubai_leads_custom_contacts');
-      const savedCustomContacts = savedCustomContactsRaw ? JSON.parse(savedCustomContactsRaw) : {};
-      savedCustomContacts[editingLeadForContact.id] = customData;
-      if (editingLeadForContact.placeId) {
-        savedCustomContacts[editingLeadForContact.placeId] = customData;
-      }
-      localStorage.setItem('dubai_leads_custom_contacts', JSON.stringify(savedCustomContacts));
-    } catch (_e) {
-      // local storage fallback
-    }
-
-    setLeads(prev => prev.map(l => {
-      if (l.id === editingLeadForContact.id || (l.placeId && l.placeId === editingLeadForContact.placeId)) {
-        return {
-          ...l,
-          contactPersonName: customData.contactPersonName || undefined,
-          contactPersonRole: customData.contactPersonRole || undefined,
-          contactDirectPhone: customData.contactDirectPhone || undefined,
-          notes: customData.notes || undefined,
-          customContactUpdated: true,
-        };
-      }
-      return l;
-    }));
-
-    if (activeLeadOnMap && (activeLeadOnMap.id === editingLeadForContact.id || (activeLeadOnMap.placeId && activeLeadOnMap.placeId === editingLeadForContact.placeId))) {
-      setActiveLeadOnMap(prev => prev ? {
-        ...prev,
-        contactPersonName: customData.contactPersonName || undefined,
-        contactPersonRole: customData.contactPersonRole || undefined,
-        contactDirectPhone: customData.contactDirectPhone || undefined,
-        notes: customData.notes || undefined,
-        customContactUpdated: true,
-      } : null);
-    }
-
-    setEditingLeadForContact(null);
-    setContactSaveToast(`✓ Updated decision maker for ${editingLeadForContact.name}`);
-    setTimeout(() => setContactSaveToast(null), 3000);
-  };
-
   const filteredLeads = useMemo(() => {
-    const query = (customSearch || resultSearchQuery || '').toLowerCase().trim();
+    const query = (customSearch || '').toLowerCase().trim();
     if (!query) return leads;
     return leads.filter((l) =>
       l.name.toLowerCase().includes(query) ||
@@ -344,948 +216,447 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
       l.district.toLowerCase().includes(query) ||
       (l.phone && l.phone.toLowerCase().includes(query)) ||
       (l.contactPersonName && l.contactPersonName.toLowerCase().includes(query)) ||
-      (l.distanceLabel && l.distanceLabel.toLowerCase().includes(query)) ||
-      (l.metroExit && l.metroExit.toLowerCase().includes(query)) ||
-      (l.walkingGuide && l.walkingGuide.toLowerCase().includes(query)) ||
-      (l.yearsVsReviewsGap && l.yearsVsReviewsGap.toLowerCase().includes(query)) ||
       (l.pitchAngle && l.pitchAngle.toLowerCase().includes(query))
     );
-  }, [leads, customSearch, resultSearchQuery]);
+  }, [leads, customSearch]);
 
-  const fetchBusinesses = useCallback(async (
-    targetDistrict = district,
-    targetCategory = category,
-    targetReview = reviewFilter,
-    targetCount = extractCount,
-    targetQuery = customSearch,
-    targetSort = sortBy
-  ) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/search-businesses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          district: targetDistrict,
-          category: targetCategory,
-          reviewRange: targetReview,
-          count: targetCount,
-          customQuery: targetQuery,
-          sortBy: targetSort,
-        }),
-      });
+  const fetchBusinesses = useCallback(
+    async (
+      targetDistrict = district,
+      targetCategory = category,
+      targetReview = reviewFilter,
+      targetSort = sortBy
+    ) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/search-businesses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            district: targetDistrict,
+            category: targetCategory,
+            reviewRange: targetReview,
+            count: 35,
+            customQuery: customSearch,
+            sortBy: targetSort,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to load businesses from Dubai directory');
-      }
+        if (!response.ok) {
+          throw new Error('Failed to load businesses');
+        }
 
-      const data = await response.json();
-      if (data.businesses && Array.isArray(data.businesses)) {
-        let savedCustomContacts: Record<string, any> = {};
-        try {
-          const raw = localStorage.getItem('dubai_leads_custom_contacts');
-          if (raw) savedCustomContacts = JSON.parse(raw);
-        } catch (_e) {}
-
-        const enriched: BusinessLead[] = data.businesses.map((b: BusinessLead) => {
-          const custom = savedCustomContacts[b.id] || (b.placeId && savedCustomContacts[b.placeId]);
-          return {
+        const data = await response.json();
+        if (data.businesses && Array.isArray(data.businesses)) {
+          const enriched: BusinessLead[] = data.businesses.map((b: BusinessLead) => ({
             ...b,
             audit: b.audit || generateGmbAudit(b),
-            ...(custom ? {
-              contactPersonName: custom.contactPersonName || b.contactPersonName,
-              contactPersonRole: custom.contactPersonRole || b.contactPersonRole,
-              contactDirectPhone: custom.contactDirectPhone || b.contactDirectPhone,
-              notes: custom.notes,
-              customContactUpdated: true,
-            } : {}),
-          };
-        });
-        setLeads(enriched);
-        setLeadSource(data.source || 'curated_dubai_dataset');
-        setTotalMatched(data.totalMatched ?? enriched.length);
-        setTotalInDistrict(data.totalInDistrict ?? enriched.length);
-        setTotalInDistrictCategory(data.totalInDistrictCategory ?? enriched.length);
-        if (enriched.length > 0) {
-          setActiveLeadOnMap(enriched[0]);
-        } else {
-          setActiveLeadOnMap(null);
+            buildingInfo: b.buildingInfo || generateGisBuildingData(b),
+          }));
+          setLeads(enriched);
+          if (enriched.length > 0) {
+            setActiveLeadOnMap(enriched[0]);
+          }
         }
-      }
-    } catch (_err: any) {
-      // Instant fallback to verified local Dubai dataset if network has any issue
-      const cleanDist = targetDistrict.replace(/\(.*?\)/g, '').trim().toLowerCase();
-      const localFiltered = REAL_DUBAI_BUSINESSES.filter((b) => {
-        if (targetDistrict !== 'All Dubai' && !b.district.toLowerCase().includes(cleanDist)) return false;
-        if (targetCategory !== 'All Categories' && b.category !== targetCategory) return false;
-        return true;
-      });
-      const fallbackList = (localFiltered.length > 0 ? localFiltered : REAL_DUBAI_BUSINESSES).slice(0, 30).map((b) => ({
-        ...b,
-        audit: generateGmbAudit(b as any),
-      })) as BusinessLead[];
-      setLeads(fallbackList);
-      setTotalMatched(localFiltered.length || fallbackList.length);
-      if (fallbackList.length > 0) {
-        setActiveLeadOnMap(fallbackList[0]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [district, category, reviewFilter, extractCount, customSearch]);
-
-  const handleImportLeads = (importedLeads: BusinessLead[], mode: 'replace' | 'append') => {
-    const enriched = importedLeads.map((b) => ({
-      ...b,
-      audit: b.audit || generateGmbAudit(b),
-    }));
-
-    if (mode === 'replace') {
-      setLeads(enriched);
-      setLeadSource('gmb_everywhere_import');
-      if (enriched.length > 0) {
-        setActiveLeadOnMap(enriched[0]);
-        // If imported leads are in a known district, sync the selector
-        if (enriched[0].district && DUBAI_DISTRICTS.includes(enriched[0].district)) {
-          setDistrict(enriched[0].district);
+      } catch (_err: any) {
+        // Fallback to verified local dataset
+        const cleanDist = targetDistrict.replace(/\(.*?\)/g, '').trim().toLowerCase();
+        const localFiltered = REAL_DUBAI_BUSINESSES.filter((b) => {
+          if (targetDistrict !== 'All Dubai' && !b.district.toLowerCase().includes(cleanDist)) return false;
+          if (targetCategory !== 'All Categories' && b.category !== targetCategory) return false;
+          return true;
+        }).map((b) => ({
+          ...b,
+          audit: generateGmbAudit(b as any),
+          buildingInfo: generateGisBuildingData(b as any),
+        })) as BusinessLead[];
+        setLeads(localFiltered);
+        if (localFiltered.length > 0) {
+          setActiveLeadOnMap(localFiltered[0]);
         }
+      } finally {
+        setLoading(false);
       }
-    } else {
-      setLeads((prev) => [...enriched, ...prev]);
-      setLeadSource('gmb_everywhere_hybrid');
-      if (enriched.length > 0) {
-        setActiveLeadOnMap(enriched[0]);
-      }
-    }
-  };
+    },
+    [district, category, reviewFilter, sortBy, customSearch]
+  );
 
-  // Real-time automatic fetch whenever filters change or custom search changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchBusinesses(district, category, reviewFilter, extractCount, customSearch, sortBy);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [district, category, reviewFilter, extractCount, customSearch, sortBy]);
+    fetchBusinesses(district, category, reviewFilter, sortBy);
+  }, [district, category, reviewFilter, sortBy, fetchBusinesses]);
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const exportCsv = () => {
-    const exportList = filteredLeads.length > 0 ? filteredLeads : leads;
-    const headers = [
-      'Proximity Rank (#)',
-      'Name',
-      'Category',
-      'District',
-      'Footsteps from Metro Exit',
-      'Walk Time (Minutes)',
-      'Metro Exit Gate',
-      'Walking Guide Directions',
-      'Google Rating',
-      'Review Count',
-      'Years Operating',
-      'Established Year',
-      'Reviews/Year',
-      'Point of Contact',
-      'Contact Role',
-      'Direct Phone / WhatsApp',
-      'Landline Phone',
-      'Address',
-      'Google Maps Link',
-      'Pitch Angle',
-      'Years vs Review Gap Pitch',
-    ];
-    const rows = exportList.map((l, idx) => [
-      l.rank || (idx + 1),
-      `"${l.name.replace(/"/g, '""')}"`,
-      `"${l.category}"`,
-      `"${l.district}"`,
-      l.footsteps || Math.round((l.distanceKm || 0.1) * 1300),
-      l.walkMinutes || Math.max(1, Math.ceil((l.distanceKm || 0.1) * 13)),
-      `"${(l.metroExit || 'Exit 1').replace(/"/g, '""')}"`,
-      `"${(l.walkingGuide || `~${l.footsteps || 110} footsteps from Metro Exit`).replace(/"/g, '""')}"`,
-      l.rating,
-      l.reviewCount,
-      l.yearsInBusiness ?? '',
-      l.establishedYear ?? '',
-      l.reviewsPerYear ?? '',
-      `"${(l.contactPersonName || '').replace(/"/g, '""')}"`,
-      `"${(l.contactPersonRole || '').replace(/"/g, '""')}"`,
-      `"${l.contactDirectPhone || ''}"`,
-      `"${l.phone}"`,
-      `"${l.address.replace(/"/g, '""')}"`,
-      `"${l.mapsUrl}"`,
-      `"${l.pitchAngle.replace(/"/g, '""')}"`,
-      `"${(l.yearsVsReviewsGap || '').replace(/"/g, '""')}"`,
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Dubai_NFC_Leads_${district.replace(/\s+/g, '_')}_${leads.length}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Corridor station names
+  const corridorStations = useMemo(() => {
+    if (district.includes('Rigga')) {
+      return { prev: 'Deira City Centre', curr: 'Al Rigga', next: 'Union (Interchange)' };
+    } else if (district.includes('Union')) {
+      return { prev: 'Al Rigga', curr: 'Union', next: 'BurJuman (Interchange)' };
+    } else if (district.includes('BurJuman')) {
+      return { prev: 'Union', curr: 'BurJuman', next: 'ADCB (Karama)' };
+    } else {
+      return { prev: 'Previous Station', curr: parsedCurrentStation.displayName, next: 'Next Station' };
+    }
+  }, [district, parsedCurrentStation]);
 
   return (
-    <div className="flex flex-col gap-3 pb-16">
-      {/* Mobile-First Compact Scout Control Center */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl">
-        {/* Top Header Row with Actions */}
-        <div className="flex items-center justify-between gap-2 mb-2.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Compass className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="text-xs sm:text-sm font-bold text-white tracking-tight">
-                  Google Maps Scout
-                </h2>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 shrink-0">
-                  🎯 0-100 Reviews
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 truncate hidden xs:block">
-                High-converting Dubai prospects for Google Review NFC cards
-              </p>
-            </div>
+    <div className="flex flex-col gap-4 pb-20 max-w-xl mx-auto text-white">
+      {/* 1. TARGET METRO STATION CONTAINER (MATCHING IMAGE EXACTLY) */}
+      <section aria-label="Target Metro Station" className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3.5">
+        {/* Header inside container */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrainFront className="w-4 h-4 text-[#ec1a65]" />
+            <span className="text-[15px] font-bold text-white tracking-tight">
+              Target Metro Station
+            </span>
           </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsImporterOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-[11px] shadow-sm transition"
-              title="Import GMB Everywhere CSV/JSON"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import GMB</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={exportCsv}
-              disabled={leads.length === 0}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-medium transition disabled:opacity-50"
-              title="Export CSV list"
-            >
-              <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-          </div>
+          <span className="text-[12px] text-[#8e8aab]">
+            Dubai Red & Green Lines
+          </span>
         </div>
 
-        {/* Unified Search Input Bar */}
-        <div className="flex items-stretch gap-1.5 mb-2.5">
-          <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 text-amber-400 absolute left-3 top-2.5 pointer-events-none" />
-            <input
-              type="text"
-              value={customSearch}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustomSearch(val);
-                setResultSearchQuery(val);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  fetchBusinesses();
-                }
-              }}
-              placeholder="Search shop, barber, salon, clinic, metro..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 font-medium"
-            />
-            {customSearch && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomSearch('');
-                  setResultSearchQuery('');
-                }}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs font-bold"
-                title="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
+        {/* Line Filter Capsule Switch */}
+        <div className="flex items-center bg-[#100e1f] p-1 rounded-full border border-[#26223e]">
           <button
             type="button"
-            onClick={() => fetchBusinesses()}
-            disabled={loading}
-            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/15 disabled:opacity-50 shrink-0"
+            onClick={() => setStationLineFilter('all')}
+            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold transition-all ${
+              stationLineFilter === 'all'
+                ? 'bg-white text-black shadow-sm'
+                : 'text-[#8e8aab] hover:text-white'
+            }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden xs:inline">{loading ? 'Scanning...' : 'Extract'}</span>
+            All (48)
+          </button>
+          <button
+            type="button"
+            onClick={() => setStationLineFilter('red')}
+            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              stationLineFilter === 'red'
+                ? 'bg-[#ff3366] text-white shadow-sm'
+                : 'text-[#8e8aab] hover:text-white'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#ff3366]" />
+            <span>Red (30)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStationLineFilter('green')}
+            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              stationLineFilter === 'green'
+                ? 'bg-[#10b981] text-white shadow-sm'
+                : 'text-[#8e8aab] hover:text-white'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+            <span>Green (18)</span>
           </button>
         </div>
 
-        {/* Category Fast Horizontal Scroll Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin mb-2.5 select-none">
-          {[
-            { label: '🌐 All', value: 'All Categories' },
-            { label: '✂️ Barbers', value: "Men's Barbershops & Gents Salons" },
-            { label: '🦷 Dental', value: 'Dental Clinic' },
-            { label: '🍽️ Dining', value: 'Restaurants & Cafes' },
-            { label: '✨ Salons', value: 'Ladies Salons & Spas' },
-            { label: '💊 Clinics', value: 'Clinics & Healthcare' },
-            { label: '🚗 Auto', value: 'Automotive' },
-            { label: '🏋️ Gyms', value: 'Fitness & Gyms' },
-            { label: '🛍️ Retail', value: 'Retail & Boutiques' },
-          ].map((cat) => {
-            const isSelected = category === cat.value;
+        {/* Station Search Input */}
+        <div className="relative flex items-center w-full">
+          <Search className="w-4 h-4 text-[#8e8aab] absolute left-3.5 pointer-events-none" />
+          <input
+            type="text"
+            value={stationQuickSearch}
+            onChange={(e) => setStationQuickSearch(e.target.value)}
+            placeholder="Find station: Al Rigga, Union, BurJuman…"
+            className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-[#6d698a] transition-colors"
+          />
+        </div>
+
+        {/* Station Scrollable List (as shown in image) */}
+        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl max-h-36 overflow-y-auto divide-y divide-[#1e1a33] px-3 py-1">
+          {quickStations.slice(0, 15).map((station) => {
+            const isSelected = district === station;
+            const info = parseStationInfo(station);
             return (
               <button
-                key={cat.value}
+                key={station}
                 type="button"
                 onClick={() => {
-                  setCategory(cat.value);
-                  fetchBusinesses(district, cat.value);
+                  setDistrict(station);
+                  fetchBusinesses(station, category);
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition shrink-0 ${
-                  isSelected
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white hover:bg-slate-800'
+                className={`w-full py-2 px-1 text-left flex items-center justify-between gap-2 hover:bg-[#1a172e] rounded-lg transition-colors ${
+                  isSelected ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'
                 }`}
               >
-                {cat.label}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      info.isGreen && !info.isRed
+                        ? 'bg-[#10b981]'
+                        : 'bg-[#ff3366]'
+                    }`}
+                  />
+                  <span className={`text-[13px] truncate ${isSelected ? 'text-white font-bold' : 'text-white font-medium'}`}>
+                    {info.displayName}
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#6f6b8c] truncate shrink-0">
+                  {info.area.split('/')[0].trim()}
+                </span>
               </button>
             );
           })}
         </div>
 
-        {/* Secondary Filter & District Selection Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800">
-          {/* Target District Selector */}
-          <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Target Area / Metro
-            </label>
-            <select
-              value={district}
-              onChange={(e) => {
-                const val = e.target.value;
-                setDistrict(val);
-                fetchBusinesses(val, category);
-              }}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-medium truncate"
-            >
-              <optgroup label="🚇 DUBAI METRO STATIONS">
-                {DUBAI_METRO_STATIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="🏙️ GENERAL COMMERCIAL DISTRICTS">
-                {DUBAI_GENERAL_DISTRICTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-
-          {/* Review Filter */}
-          <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Review Volume
-            </label>
-            <select
-              value={reviewFilter}
-              onChange={(e) => setReviewFilter(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 focus:outline-none focus:border-amber-500 font-medium truncate"
-            >
-              <option value="sweet_spot">🎯 0-100 Reviews</option>
-              <option value="0_to_20">🚨 0-20 Reviews</option>
-              <option value="0_to_50">🔥 0-50 Reviews</option>
-              <option value="20_to_50">⭐ 20-50 Reviews</option>
-              <option value="all">🌐 Any Reviews</option>
-            </select>
-          </div>
-
-          {/* Sort By Proximity */}
-          <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Sort Order
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 focus:outline-none focus:border-amber-500 font-medium truncate"
-            >
-              <option value="nearest">📍 Nearest (Metro)</option>
-              <option value="sweet_spot">🎯 Sweet Spot</option>
-              <option value="reviews_asc">🔥 Lowest Reviews</option>
-              <option value="rating_desc">⭐ Highest Rating</option>
-              <option value="name_asc">🔤 A-Z</option>
-            </select>
-          </div>
-
-          {/* Extract Count */}
-          <div>
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Extract Batch
-            </label>
-            <div className="grid grid-cols-3 gap-1">
-              <button
-                type="button"
-                onClick={() => setExtractCount(20)}
-                className={`py-1 rounded text-[11px] font-bold transition border ${
-                  extractCount === 20
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                    : 'bg-slate-950 text-slate-400 border-slate-700'
-                }`}
-              >
-                20
-              </button>
-              <button
-                type="button"
-                onClick={() => setExtractCount(50)}
-                className={`py-1 rounded text-[11px] font-bold transition border ${
-                  extractCount === 50
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                    : 'bg-slate-950 text-slate-400 border-slate-700'
-                }`}
-              >
-                50
-              </button>
-              <button
-                type="button"
-                onClick={() => setExtractCount(999)}
-                className={`py-1 rounded text-[11px] font-bold transition border ${
-                  extractCount >= 999
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                    : 'bg-slate-950 text-amber-400 border-amber-500/40'
-                }`}
-              >
-                ALL
-              </button>
+        {/* Station Corridor Box (Dark crimson/pink tint as in image) */}
+        <div className="bg-[#24111e] border border-[#ec1a65]/40 rounded-2xl p-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#ff5c8a]">
+              <TrainFront className="w-3.5 h-3.5" />
+              <span>Station Corridor:</span>
             </div>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-white cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={scoutAdjacentCorridor}
+                onChange={(e) => setScoutAdjacentCorridor(e.target.checked)}
+                className="accent-[#ec1a65] rounded"
+              />
+              <span>Scout Adjacent Corridor</span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between text-xs pt-1 border-t border-[#ec1a65]/20">
+            <span className="text-[#8e8aab] truncate max-w-[120px]">{corridorStations.prev}</span>
+            <span className="font-bold text-white flex items-center gap-1 shrink-0">
+              ➔ {corridorStations.curr} ➔
+            </span>
+            <span className="text-[#8e8aab] truncate max-w-[120px] text-right">{corridorStations.next}</span>
           </div>
         </div>
-      </div>
 
-      {/* Result Stats & View Switcher Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-slate-200">
-            <span className="text-amber-400 font-bold">{filteredLeads.length}</span> leads in <span className="text-white font-semibold">{district.split('(')[0].trim()}</span>
-          </span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
-            ✓ Verified Places
-          </span>
+        {/* Target Business Category Section */}
+        <div>
+          <label className="block text-xs font-bold text-white mb-2">
+            Target Business Category:
+          </label>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 select-none">
+            {CATEGORIES.map((cat) => {
+              const isSelected = category === cat.value;
+              const Icon = cat.icon;
+              return (
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => {
+                    setCategory(cat.value);
+                    if (cat.label === 'Barbershop') setCustomSearch('barber');
+                    else if (cat.label === 'Cafes') setCustomSearch('cafe');
+                    else if (cat.label === 'Ladies Salon') setCustomSearch('salon');
+                    else if (cat.label === 'Dental Clinic') setCustomSearch('dental');
+                    else setCustomSearch('');
+                    fetchBusinesses(district, cat.value);
+                  }}
+                  className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all duration-150 shrink-0 ${
+                    isSelected
+                      ? 'bg-[#ec1a65] text-white shadow-lg shadow-[#ec1a65]/30'
+                      : 'bg-[#1a172e] border border-[#2c2847] text-[#9f9cb8] hover:text-white hover:border-[#3d3761]'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
-          {/* GMB Everywhere Audit Toggle */}
+        {/* Query Input & Number Range Pill Inputs */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative flex items-center">
+            <Store className="w-4 h-4 text-[#8e8aab] absolute left-3.5 pointer-events-none" />
+            <input
+              type="text"
+              value={customSearch}
+              onChange={(e) => setCustomSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') fetchBusinesses();
+              }}
+              placeholder="e.g. barber, cafe, clinic..."
+              className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full pl-10 pr-3 py-2 text-xs text-white placeholder-[#6d698a] transition-colors"
+            />
+          </div>
+
+          <div className="flex items-center bg-[#110f22] border border-[#26223d] rounded-full p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setTargetCount(20)}
+              className={`px-3 py-1 font-bold rounded-full transition-all ${
+                targetCount === 20 ? 'bg-white text-black' : 'text-[#8e8aab]'
+              }`}
+            >
+              20
+            </button>
+            <button
+              type="button"
+              onClick={() => setTargetCount(50)}
+              className={`px-3 py-1 font-bold rounded-full transition-all ${
+                targetCount === 50 ? 'bg-white text-black' : 'text-[#8e8aab]'
+              }`}
+            >
+              50
+            </button>
+          </div>
+        </div>
+
+        {/* Big Vibrant Gradient CTA Button */}
+        <button
+          type="button"
+          onClick={() => fetchBusinesses()}
+          className="w-full bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#00a8f3] hover:opacity-95 active:scale-[0.99] text-white font-bold py-3 px-6 rounded-full shadow-lg shadow-[#ec1a65]/25 flex items-center justify-center gap-2 text-[15px] transition-all"
+        >
+          <Search className="w-4 h-4" />
+          <span>
+            Scout {targetCount} {customSearch || 'businesses'} at {parsedCurrentStation.displayName}
+          </span>
+        </button>
+      </section>
+
+      {/* 2. SWEET SPOT BANNER (MATCHING IMAGE EXACTLY) */}
+      <section
+        aria-label="Target Review Sweet Spot"
+        className="bg-[#241c0a] border border-[#785a10] rounded-full py-2.5 px-4 flex items-center justify-between text-xs shadow-md"
+      >
+        <div className="flex items-center gap-2 font-bold text-[#fbbf24]">
+          <Flame className="w-4 h-4 fill-amber-500 text-amber-500" />
+          <span>Target: 21–50 Reviews (Sweet Spot)</span>
+        </div>
+        <span className="text-[#d4b465] font-semibold text-[11px] sm:text-xs">
+          Highest NFC Card Close Rate
+        </span>
+      </section>
+
+      {/* 3. RESULTS HEADER */}
+      <section aria-label="Results and Controls" className="flex items-center justify-between gap-3 pt-1 px-1">
+        <div className="text-[13px] text-[#8e8aab]">
+          <span className="text-white font-bold">{filteredLeads.length}</span> businesses found
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setAuditOverlayEnabled(!auditOverlayEnabled)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition shrink-0 ${
-              auditOverlayEnabled
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-            }`}
+            onClick={() => setIsFilterSheetOpen(true)}
+            className="h-8 px-3.5 rounded-full text-[13px] font-semibold text-white bg-[#161426] border border-[#27233e] hover:bg-[#1f1c35] transition-colors flex items-center gap-1.5"
           >
-            <Gauge className="w-3.5 h-3.5 text-amber-400" />
-            <span>Audit: {auditOverlayEnabled ? 'ON' : 'OFF'}</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#8e8aab]" />
+            <span>Filter</span>
           </button>
 
-          {/* View Mode Segment Switcher */}
-          <div className="flex flex-1 sm:flex-initial items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs shadow-md">
+          {/* List / Map Switch */}
+          <div className="flex items-center bg-[#110f22] border border-[#26223d] p-0.5 rounded-full text-[12px]">
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-md font-semibold text-xs transition ${
+              className={`px-3 py-1 rounded-full font-bold transition-all ${
                 viewMode === 'list'
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-[#8e8aab] hover:text-white'
               }`}
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>List ({filteredLeads.length})</span>
+              List
             </button>
             <button
               type="button"
               onClick={() => setViewMode('map')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-md font-semibold text-xs transition ${
+              className={`px-3 py-1 rounded-full font-bold transition-all ${
                 viewMode === 'map'
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-[#8e8aab] hover:text-white'
               }`}
             >
-              <Map className="w-3.5 h-3.5" />
-              <span>Radar Map</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('split')}
-              className={`hidden md:flex items-center gap-1 px-3 py-1.5 rounded-md font-medium transition ${
-                viewMode === 'split'
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Columns className="w-3.5 h-3.5" />
-              <span>Split</span>
+              Map
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* IN-RESULT QUICK SEARCH BAR (For List & Radar View) */}
-      {!loading && leads.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 sm:p-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-lg">
-          <div className="relative w-full sm:flex-1">
-            <Search className="w-3.5 h-3.5 text-amber-400 absolute left-3 top-2.5 pointer-events-none" />
-            <input
-              type="text"
-              value={resultSearchQuery || customSearch}
-              onChange={(e) => {
-                const val = e.target.value;
-                setResultSearchQuery(val);
-                setCustomSearch(val);
-              }}
-              placeholder={`🔍 Search in ${leads.length} loaded results (shop name, address, category, phone)...`}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-8 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30"
-            />
-            {(resultSearchQuery || customSearch) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setResultSearchQuery('');
-                  setCustomSearch('');
-                }}
-                className="absolute right-2 top-1.5 text-slate-400 hover:text-white text-[11px] font-bold bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded"
-                title="Clear search filter"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 text-xs font-medium self-end sm:self-auto flex-shrink-0">
-            {resultSearchQuery ? (
-              <span className="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1.5 text-[11px]">
-                <span>Filter: Matched <strong>{filteredLeads.length}</strong> of {leads.length} leads</span>
-                <button
-                  type="button"
-                  onClick={() => setResultSearchQuery('')}
-                  className="ml-1 text-[10px] underline hover:text-white text-slate-300"
-                >
-                  Clear
-                </button>
-              </span>
-            ) : (
-              <span className="text-slate-400 text-[11px] flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Quick Search across <strong className="text-amber-400 font-bold">{leads.length}</strong> extracted leads</span>
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Loading State */}
+      {/* Loading state */}
       {loading && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-10 flex flex-col items-center justify-center gap-3">
-          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-200">Scanning Google Maps in {district}...</p>
-          <p className="text-xs text-slate-400">Filtering businesses with 0–100 reviews for high-conversion NFC sales</p>
+        <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-center">
+          <div className="w-6 h-6 border-2 border-[#ec1a65] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[13px] text-[#8e8aab]">Scanning businesses near {parsedCurrentStation.displayName}…</p>
         </div>
       )}
 
       {/* Error state */}
       {error && !loading && (
-        <div className="p-4 bg-red-950/40 border border-red-800/60 rounded-xl text-red-200 text-xs">
+        <div className="py-2 text-[13px] text-[#ff3366]">
           {error}
         </div>
       )}
 
-      {/* RADAR MAP VIEW */}
-      {(viewMode === 'map' || viewMode === 'split') && !loading && leads.length > 0 && (() => {
+      {/* 4. RADAR MAP VIEW */}
+      {viewMode === 'map' && !loading && leads.length > 0 && (() => {
         const centerInfo = resolveDistrictCenter(district);
-
-        // Filter leads for the radar view if user selects a subfilter
         const displayedRadarLeads = filteredLeads.filter((l) => {
-          if (radarCategoryFilter === 'barbershop') {
-            return detectBusinessCategory(l.category, l.name) === 'barbershop';
-          }
-          if (radarCategoryFilter === 'dental') {
-            return detectBusinessCategory(l.category, l.name) === 'dental';
-          }
-          if (radarCategoryFilter === 'high_need') {
-            return l.reviewCount < 50;
-          }
+          if (radarCategoryFilter === 'barbershop') return l.category.toLowerCase().includes('barber');
+          if (radarCategoryFilter === 'dental') return l.category.toLowerCase().includes('dental');
+          if (radarCategoryFilter === 'high_need') return l.reviewCount < 50;
           return true;
         });
 
-        // Dynamic spatial zoom calculation based on selected radarZoom level
-        // At zoom=1 (100%), outer ring radius is 1.2 km
-        // At zoom=2 (200%), outer ring radius zooms in to 600m (spreading close businesses far apart!)
-        // At zoom=3 (300%), outer ring radius zooms in to 400m
-        // At zoom=0.5 (50%), outer ring radius zooms out to 2.4 km
-        const effectiveRadiusKm = 1.2 / radarZoom;
-        const latSpan = effectiveRadiusKm / 111.0; // ~111km per deg lat
-        const lngSpan = effectiveRadiusKm / 100.5; // ~100.5km per deg lng at 25°N
-
-        const outerRangeLabel = effectiveRadiusKm >= 1 ? `${effectiveRadiusKm.toFixed(1)} km` : `${Math.round(effectiveRadiusKm * 1000)} m`;
-        const midRangeLabel = (effectiveRadiusKm * 0.67) >= 1 ? `${(effectiveRadiusKm * 0.67).toFixed(1)} km` : `${Math.round(effectiveRadiusKm * 670)} m`;
-        const innerRangeLabel = (effectiveRadiusKm * 0.33) >= 1 ? `${(effectiveRadiusKm * 0.33).toFixed(1)} km` : `${Math.round(effectiveRadiusKm * 330)} m`;
-
-        const dentalCount = filteredLeads.filter(l => l.category.toLowerCase().includes('dental') || l.name.toLowerCase().includes('dental')).length;
-        const highNeedCount = filteredLeads.filter(l => l.reviewCount < 50).length;
-
-        // Sequence of points for connected footstep visit route (Hub -> Rank 1 -> Rank 2 -> Rank 3 -> Rank 4...)
-        const sortedRadarLeads = [...displayedRadarLeads]
-          .sort((a, b) => (a.rank || 999) - (b.rank || 999))
-          .slice(0, routeMaxStops);
-
-        const routePoints = [
-          {
-            id: 'hub',
-            name: `${district.replace(/\(.*?\)/g, '').trim()} Metro Exit 1`,
-            rank: 0,
-            x: 50,
-            y: 50,
-            footsteps: 0,
-            isHub: true,
-            lead: undefined as BusinessLead | undefined,
-          },
-          ...sortedRadarLeads.map((lead, idx) => {
-            const leadLat = lead.lat ?? centerInfo.lat;
-            const leadLng = lead.lng ?? centerInfo.lng;
-
-            const dLat = leadLat - centerInfo.lat;
-            const dLng = leadLng - centerInfo.lng;
-
-            // Center is (50, 50). Radar radius corresponds to 40% of container width
-            const rawX = 50 + (dLng / lngSpan) * 40;
-            const rawY = 50 - (dLat / latSpan) * 40;
-
-            const xPercent = Math.max(8, Math.min(92, rawX));
-            const yPercent = Math.max(8, Math.min(92, rawY));
-
-            return {
-              id: lead.id,
-              name: lead.name,
-              rank: lead.rank || (idx + 1),
-              x: xPercent,
-              y: yPercent,
-              footsteps: lead.footsteps || Math.round((lead.distanceKm || 0.1) * 1300),
-              walkMinutes: lead.walkMinutes || Math.max(1, Math.ceil((lead.distanceKm || 0.1) * 13)),
-              metroExit: lead.metroExit || 'Exit 1',
-              isHub: false,
-              lead,
-            };
-          }),
-        ];
-
-        const routePathD = routePoints.length >= 2
-          ? routePoints.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ')
-          : '';
-
-        const totalRouteFootsteps = routePoints.reduce((acc, p) => acc + (p.footsteps || 0), 0);
-        const totalRouteMinutes = Math.max(1, Math.ceil(totalRouteFootsteps / 100));
-
         return (
           <div className="space-y-3">
-            <RealInteractiveRadarMap
-              leads={displayedRadarLeads}
-              district={district}
-              centerInfo={centerInfo}
-              activeLead={activeLeadOnMap}
-              onSelectLead={(lead) => setActiveLeadOnMap(lead)}
-              radarCategoryFilter={radarCategoryFilter}
-              setRadarCategoryFilter={setRadarCategoryFilter}
-              showRouteTrail={showRouteTrail}
-              setShowRouteTrail={setShowRouteTrail}
-              routeMaxStops={routeMaxStops}
-              setRouteMaxStops={setRouteMaxStops}
-              onOpenGisModal={openGisModal}
-              initialMapEngine={mapEngine}
-              onEngineChange={setMapEngine}
-            />
+            <div className="rounded-3xl border border-[#26223e] overflow-hidden shadow-2xl">
+              <RealInteractiveRadarMap
+                leads={displayedRadarLeads}
+                district={district}
+                centerInfo={centerInfo}
+                activeLead={activeLeadOnMap}
+                onSelectLead={(lead) => setActiveLeadOnMap(lead)}
+                radarCategoryFilter={radarCategoryFilter}
+                setRadarCategoryFilter={setRadarCategoryFilter}
+                showRouteTrail={showRouteTrail}
+                setShowRouteTrail={setShowRouteTrail}
+                routeMaxStops={routeMaxStops}
+                setRouteMaxStops={setRouteMaxStops}
+                onOpenGisModal={openGisModal}
+                initialMapEngine={mapEngine}
+                onEngineChange={setMapEngine}
+              />
+            </div>
 
-            {/* Interactive Field Visit Route Planner Card */}
-            {showRouteTrail && routePoints.length > 1 && (
-              <div className="mt-3 bg-slate-950/90 border border-amber-500/40 rounded-xl p-3 sm:p-4 shadow-xl">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Footprints className="w-4 h-4 text-amber-400 animate-pulse" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wide">
-                      Field Visit Route Planner • {routePoints.length - 1} Connected Stops
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-                    <span className="text-amber-400 font-bold">👣 Total Route: ~{totalRouteFootsteps} Footsteps</span>
-                    <span>•</span>
-                    <span className="text-emerald-400 font-bold">⏱️ ~{totalRouteMinutes} min total walk</span>
-                  </div>
-                </div>
-
-                {/* Step Sequence Pills */}
-                <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
-                  {routePoints.map((pt, idx) => {
-                    const isHub = pt.isHub;
-                    const isSelected = !isHub && activeLeadOnMap?.id === pt.id;
-
-                    return (
-                      <React.Fragment key={pt.id || idx}>
-                        {idx > 0 && (
-                          <div className="flex items-center gap-1 text-slate-500 text-[10px] font-mono shrink-0">
-                            <span className="text-amber-400 font-bold text-xs">➔</span>
-                            <span className="text-slate-400 text-[9px] font-bold">+{pt.footsteps}👣</span>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (pt.lead) setActiveLeadOnMap(pt.lead);
-                          }}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono whitespace-nowrap transition shrink-0 ${
-                            isHub
-                              ? 'bg-amber-500/15 border-amber-500/50 text-amber-300 font-bold'
-                              : isSelected
-                              ? 'bg-amber-500 text-slate-950 font-black border-white shadow-lg ring-1 ring-amber-300 scale-105'
-                              : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-amber-400'
-                          }`}
-                        >
-                          {isHub ? (
-                            <span>📍 Hub: {pt.name}</span>
-                          ) : (
-                            <>
-                              <span className={`px-1.5 py-0.2 rounded font-black text-[10px] ${isSelected ? 'bg-slate-950 text-amber-300' : 'bg-amber-500 text-slate-950'}`}>
-                                #{pt.rank}
-                              </span>
-                              <span className="font-sans font-semibold text-[11px] max-w-[130px] truncate">{pt.name}</span>
-                            </>
-                          )}
-                        </button>
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Interactive Selected Target Telemetry Card */}
             {activeLeadOnMap && (
-              <div className="mt-2 bg-slate-900/95 border border-amber-500/50 rounded-xl p-3.5 sm:p-4 shadow-2xl relative">
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                      <span className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-xs font-mono shadow border border-amber-300">
-                        RANK #{activeLeadOnMap.rank || 1}
-                      </span>
-                      <span className="text-[10px] font-mono font-bold uppercase text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                        {activeLeadOnMap.district}
-                      </span>
-                      <CategoryBadge category={activeLeadOnMap.category} businessName={activeLeadOnMap.name} />
-                      <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">
-                        ✓ Verified Real Place
-                      </span>
+              <div className="p-4 bg-[#161426] border border-[#27233e] rounded-2xl shadow-xl">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-[16px] font-bold text-white tracking-tight">
+                      {activeLeadOnMap.name}
+                    </h4>
+                    <div className="text-[12px] text-[#8e8aab] mt-0.5">
+                      {activeLeadOnMap.category} · {activeLeadOnMap.address}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">{getCategoryVisualMeta(activeLeadOnMap.category, activeLeadOnMap.name).emoji}</span>
-                      <h4 className="text-sm sm:text-base font-bold text-white truncate">
-                        {activeLeadOnMap.name}
-                      </h4>
-                    </div>
-
-                    {/* Point A (Metro) ➔ Point B (Business) Footsteps & Walking Guide Banner */}
-                    <div className="mt-2 p-2.5 rounded-xl bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/40 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-xl">👣</span>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2 font-bold text-white flex-wrap">
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] border border-emerald-500/40">
-                              POINT A: Metro ({activeLeadOnMap.metroExit || 'Exit 1'})
-                            </span>
-                            <span className="text-amber-400 font-bold">➔</span>
-                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] border border-amber-500/40">
-                              POINT B: Venue
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-200">
-                            <span className="font-bold text-amber-300 font-mono">{activeLeadOnMap.footsteps ? `${activeLeadOnMap.footsteps} Footsteps` : 'Nearby Steps'}</span>
-                            <span className="text-slate-500">•</span>
-                            <span className="text-emerald-400 font-semibold font-mono">~{activeLeadOnMap.walkMinutes || 1} min walk</span>
-                            <span className="text-slate-500">•</span>
-                            <span className="text-slate-300 font-mono">~{Math.round((activeLeadOnMap.footsteps || 150) * 0.75)} meters</span>
-                          </div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/80 px-2 py-1 rounded border border-emerald-800">
-                        {activeLeadOnMap.walkingGuide || `Direct walk from Metro ${activeLeadOnMap.metroExit || 'Exit 1'}`}
-                      </span>
-                    </div>
-
-                    {/* 2GIS.ae Building Entrance & Inside Business Directory Banner */}
-                    {(() => {
-                      const bInfo = activeLeadOnMap.buildingInfo || generateGisBuildingData(activeLeadOnMap);
-                      return (
-                        <div className="mt-2 p-2.5 rounded-xl bg-gradient-to-r from-emerald-950/60 via-slate-950 to-slate-900 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs shadow-sm">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 text-sm font-bold shrink-0">
-                              🏢
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-white text-xs">{bInfo.buildingName}</span>
-                                <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40">
-                                  Makani: {bInfo.makaniNumber}
-                                </span>
-                                <span className="text-[9px] font-mono bg-emerald-950 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/30 font-bold">
-                                  100% Free • Zero API
-                                </span>
-                                <span className="text-[10px] text-slate-300 font-mono">
-                                  {bInfo.currentLeadFloor} • {bInfo.currentLeadUnit}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-[10px] text-emerald-300 mt-0.5">
-                                <span>🚪 <strong>{bInfo.primaryEntrance.name}</strong></span>
-                                <span>•</span>
-                                <span className="text-slate-300 font-medium">{bInfo.indoorBusinesses.length} co-tenants inside building</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => openGisModal(activeLeadOnMap)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition shadow-sm"
-                            >
-                              <DoorOpen className="w-3.5 h-3.5" />
-                              <span>2GIS Inside Directory</span>
-                            </button>
-                            <a
-                              href={bInfo.gisUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition"
-                              title="Open free public 2GIS.ae map in new tab"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    <p className="text-xs text-slate-300 mt-1 flex items-center gap-1.5 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                      <span>{activeLeadOnMap.address}</span>
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
-                      <span className="flex items-center gap-1 text-amber-400 font-bold">
-                        <Star className="w-3.5 h-3.5 fill-amber-400" />
-                        {activeLeadOnMap.rating}
-                      </span>
-                      <span className="text-slate-300 font-mono">({activeLeadOnMap.reviewCount} Google reviews)</span>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-slate-300 font-mono">{activeLeadOnMap.phone}</span>
-                    </div>
-
-                    {/* GMB Everywhere Quick Highlights in Radar HUD */}
-                    {activeLeadOnMap.audit && (
-                      <div className="my-2 p-2 rounded-lg bg-slate-950/80 border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono">
-                        <div className="flex flex-col">
-                          <span className="text-slate-400">Category Match</span>
-                          <span className="font-bold text-cyan-300 truncate">{activeLeadOnMap.audit.categoryMatchScore}% Match</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-slate-400">Completeness</span>
-                          <span className="font-bold text-emerald-400">{activeLeadOnMap.audit.profileCompleteness}%</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-slate-400">Review Velocity</span>
-                          <span className="font-bold text-amber-400">{activeLeadOnMap.audit.reviewVelocity.split(' ')[0]} /mo</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-slate-400">Photos Count</span>
-                          <span className="font-bold text-purple-400">{activeLeadOnMap.audit.photosCount} Photos</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Point of Contact (Call Before Visit) in Radar HUD */}
-                    <div className="mt-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <UserCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                        <span className="font-bold text-white">{activeLeadOnMap.contactPersonName || 'Store / Front Desk'}</span>
-                        <span className="text-[10px] text-emerald-300 bg-emerald-900/60 px-1.5 py-0.5 rounded border border-emerald-700/50">
-                          {activeLeadOnMap.contactPersonRole || 'Key Contact'}
-                        </span>
-                        {activeLeadOnMap.customContactUpdated && (
-                          <span className="text-[9px] text-amber-300 bg-amber-950/80 px-1.5 py-0.2 rounded border border-amber-700 font-semibold">✓ On-site Verified</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`tel:${(activeLeadOnMap.contactDirectPhone || activeLeadOnMap.phone).replace(/\s+/g, '')}`}
-                          className="text-[11px] font-mono font-bold text-emerald-300 hover:text-white flex items-center gap-1 bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-700/60"
-                        >
-                          <PhoneCall className="w-3 h-3 text-emerald-400" />
-                          <span>{activeLeadOnMap.contactDirectPhone || activeLeadOnMap.phone}</span>
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => openContactEditor(activeLeadOnMap)}
-                          className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1 transition"
-                          title="Update decision maker contact details"
-                        >
-                          <Edit3 className="w-3 h-3 text-amber-400" />
-                          <span>Edit</span>
-                        </button>
-                      </div>
-                    </div>
-                    {activeLeadOnMap.notes && (
-                      <p className="text-[11px] text-emerald-300/90 mt-1.5 bg-slate-950 p-2 rounded border border-emerald-900/50 font-mono">
-                        <strong className="text-emerald-400 font-semibold">📝 Field Note: </strong>
-                        {activeLeadOnMap.notes}
-                      </p>
-                    )}
-
-                    <p className="text-xs text-amber-200/90 mt-2 bg-slate-950/70 p-2 rounded-lg border border-slate-800 leading-relaxed">
-                      <strong className="text-amber-400 font-semibold">Sales Angle: </strong>
-                      {activeLeadOnMap.pitchAngle}
-                    </p>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex sm:flex-col items-center gap-2 w-full sm:w-auto flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onSelectLead(activeLeadOnMap)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 whitespace-nowrap"
-                    >
-                      <span>Send to App 2</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-
-                    <a
-                      href={activeLeadOnMap.mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs border border-slate-700 transition"
-                    >
-                      <span>Maps</span>
-                      <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                    </a>
+                  <div className="flex items-center gap-1 text-[13px] text-white shrink-0 tabular-nums">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span className="font-bold">{activeLeadOnMap.rating}</span>
+                    <span className="text-[#8e8aab]">({activeLeadOnMap.reviewCount})</span>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => onSelectLead(activeLeadOnMap)}
+                    className="h-9 px-4 rounded-full bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-[13px] shadow-md shadow-[#ec1a65]/20 flex items-center gap-1.5"
+                  >
+                    <span>Select for Product Mate</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <a
+                    href={activeLeadOnMap.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-9 px-3.5 rounded-full bg-[#110f22] border border-[#26223d] text-[#8e8aab] hover:text-white text-[13px] font-medium transition-colors flex items-center"
+                  >
+                    Google Maps
+                  </a>
                 </div>
               </div>
             )}
@@ -1293,529 +664,192 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         );
       })()}
 
-      {/* BUSINESS LEADS LIST VIEW */}
-      {(viewMode === 'list' || viewMode === 'split') && !loading && leads.length > 0 && (
-        <>
+      {/* 5. BUSINESS LIST: Edge-to-edge list in dark theme */}
+      {viewMode === 'list' && !loading && leads.length > 0 && (
+        <section aria-label="Business Results">
           {filteredLeads.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400 text-xs">
-              No businesses in the extracted results match "<strong className="text-amber-400">{resultSearchQuery}</strong>".
+            <div className="py-12 text-center text-[#8e8aab] text-[14px]">
+              No businesses match your search.
               <button
                 type="button"
-                onClick={() => setResultSearchQuery('')}
-                className="ml-3 px-3 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400"
+                onClick={() => setCustomSearch('')}
+                className="block mx-auto mt-2 text-[#ec1a65] font-semibold hover:underline text-[13px]"
               >
-                Clear In-Result Search
+                Clear search
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="divide-y divide-[#201d36]">
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLeadId === lead.id;
+                const isPitchExpanded = expandedPitchId === lead.id;
 
                 return (
-              <div
-                key={lead.id}
-                className={`bg-slate-900 border rounded-xl p-4 transition-all duration-200 flex flex-col justify-between relative group ${
-                  isSelected
-                    ? 'border-amber-500 ring-2 ring-amber-500/20 bg-slate-850'
-                    : 'border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <div>
-                  {/* Top badges */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs font-mono shadow-sm border border-amber-300 flex items-center gap-1">
-                        <span>#{lead.rank || (filteredLeads.indexOf(lead) + 1)}</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-900 border-l border-slate-900/30 pl-1 ml-0.5">RANK</span>
-                      </span>
-                      {lead.distanceLabel && (
-                        <span className="px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] font-mono font-bold text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                          <Navigation className="w-2.5 h-2.5 text-emerald-400" />
-                          <span>{lead.distanceLabel}</span>
-                        </span>
-                      )}
-                      {lead.yearsInBusiness && (
-                        <span className="px-2 py-0.5 rounded bg-blue-950/90 text-[10px] font-mono font-bold text-blue-300 border border-blue-500/40 flex items-center gap-1" title={`${lead.yearsInBusiness} years operating in Dubai (Est. ${lead.establishedYear})`}>
-                          <Clock className="w-2.5 h-2.5 text-blue-400" />
-                          <span>In Business {lead.yearsInBusiness} Yrs (~{lead.reviewsPerYear ?? 0} revs/yr)</span>
-                        </span>
-                      )}
-                      <CategoryBadge category={lead.category} businessName={lead.name} />
-                      <span className="px-2 py-0.5 rounded bg-amber-500/10 text-[10px] font-medium text-amber-400 border border-amber-500/30">
-                        {lead.district}
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-[10px] font-semibold text-emerald-400 border border-emerald-500/30">
-                        ✓ Real Place
-                      </span>
-                    </div>
-
-                    {/* Review Badge */}
-                    <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-md border border-slate-800 text-xs font-semibold">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span className="text-white">{lead.rating}</span>
-                      <span className="text-slate-500 font-normal">({lead.reviewCount})</span>
-                    </div>
-                  </div>
-
-                  {/* Business Name with Category Emoji */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base">{getCategoryVisualMeta(lead.category, lead.name).emoji}</span>
-                    <h3 className="font-bold text-sm sm:text-base text-white tracking-tight truncate">
-                      {lead.name}
-                    </h3>
-                  </div>
-
-                  {/* Address */}
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400 mb-2">
-                    <MapPin className="w-3 h-3 text-slate-500 flex-shrink-0" />
-                    <span className="truncate">{lead.address}</span>
-                  </div>
-
-                  {/* Point A (Metro) ➔ Point B (Business) Footsteps & Walking Guide Box */}
-                  <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/40 border border-amber-500/40 rounded-xl p-2.5 mb-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs shadow-inner">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center flex-shrink-0 text-amber-300 font-bold text-xs">
-                        👣
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px] font-bold border border-emerald-500/40">
-                            POINT A: Metro ({lead.metroExit || 'Exit 1'})
-                          </span>
-                          <span className="text-amber-400 font-bold text-xs">➔</span>
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono text-[9px] font-bold border border-amber-500/40">
-                            POINT B: Venue
-                          </span>
-                          <span className="font-bold text-white text-xs font-mono ml-1">
-                            {lead.footsteps ? `${lead.footsteps} Steps` : `${Math.round((lead.distanceKm || 0.1) * 1300)} Steps`}
-                          </span>
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/40">
-                            {lead.walkMinutes ? `${lead.walkMinutes} min walk` : '1 min walk'}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-300 mt-0.5 font-mono">
-                          {lead.walkingGuide || `~${Math.round((lead.distanceKm || 0.1) * 1300)} footsteps (${lead.walkMinutes || 1} min walk) from ${lead.district} Metro`}
-                        </span>
+                  <article
+                    key={lead.id}
+                    className="py-4 px-2 hover:bg-[#161426]/50 rounded-2xl transition-colors duration-150"
+                  >
+                    {/* Primary Row */}
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-[17px] font-bold text-white tracking-tight leading-snug truncate">
+                        {lead.name}
+                      </h3>
+                      <div className="flex items-center gap-1 text-[13px] shrink-0 tabular-nums">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="font-bold text-white">{lead.rating}</span>
+                        <span className="text-[#8e8aab]">({lead.reviewCount})</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto flex-shrink-0">
+                    {/* Metadata Line 1: Category & Proximity */}
+                    <div className="flex items-center gap-1.5 text-[13px] text-[#8e8aab] mt-1 flex-wrap">
+                      <span className="text-[#c5c2db]">{lead.category}</span>
+                      <span>·</span>
+                      {lead.footsteps ? (
+                        <span className="text-[#ff5c8a] font-medium">About {lead.footsteps} footsteps from Metro</span>
+                      ) : (
+                        <span>{lead.distanceLabel || 'Near Metro'}</span>
+                      )}
+                    </div>
+
+                    {/* Metadata Line 2: Address & Directory */}
+                    <div className="text-[13px] text-[#8e8aab] mt-0.5 flex items-center justify-between gap-2 flex-wrap">
+                      <span className="truncate">
+                        {lead.address}
+                        {lead.buildingInfo?.primaryEntrance && ` · ${lead.buildingInfo.primaryEntrance.name.split('(')[0].trim()}`}
+                      </span>
+
+                      {lead.buildingInfo && (
+                        <button
+                          type="button"
+                          onClick={() => openGisModal(lead)}
+                          className="text-[12px] text-[#00b4d8] font-semibold hover:underline shrink-0"
+                        >
+                          Directory ({lead.buildingInfo.indoorBusinesses.length})
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Expandable Details */}
+                    {lead.pitchAngle && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedPitchId(isPitchExpanded ? null : lead.id)}
+                          className="text-[12px] text-[#ec1a65] font-semibold hover:underline inline-flex items-center gap-1"
+                        >
+                          <span>{isPitchExpanded ? 'Hide pitch angle' : 'View NFC pitch angle'}</span>
+                          {isPitchExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+
+                        {isPitchExpanded && (
+                          <p className="text-[13px] text-[#9f9cb8] bg-[#110f22] border border-[#26223d] p-3 rounded-xl leading-relaxed mt-1.5">
+                            {lead.pitchAngle}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions Row */}
+                    <div className="flex items-center justify-between pt-3 mt-1 flex-wrap gap-2">
+                      <div className="flex items-center gap-3 text-[13px]">
+                        <a
+                          href={`tel:${(lead.contactDirectPhone || lead.phone).replace(/\s+/g, '')}`}
+                          className="text-[#00b4d8] font-semibold hover:underline"
+                        >
+                          Call
+                        </a>
+                        <span className="text-[#4b4765] text-[11px]">·</span>
+                        <a
+                          href={`https://wa.me/${(lead.contactDirectPhone || lead.phone).replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#10b981] font-semibold hover:underline"
+                        >
+                          WhatsApp
+                        </a>
+                        <span className="text-[#4b4765] text-[11px]">·</span>
+                        <a
+                          href={lead.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#8e8aab] hover:text-white transition-colors"
+                        >
+                          Google Maps
+                        </a>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => {
-                          setActiveLeadOnMap(lead);
-                          // Scroll map into view smoothly if on small screens
-                          window.scrollTo({ top: 400, behavior: 'smooth' });
-                        }}
-                        className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] font-mono transition shadow-sm"
-                        title="Focus on this establishment and draw Point A ➔ Point B route on map"
+                        onClick={() => onSelectLead(lead)}
+                        className={`h-8 px-4 rounded-full text-[13px] font-bold transition-all ${
+                          isSelected
+                            ? 'bg-[#381423] border border-[#ec1a65]/50 text-[#ff5c8a]'
+                            : 'bg-[#ec1a65] text-white hover:opacity-90 shadow-md shadow-[#ec1a65]/20'
+                        }`}
                       >
-                        Map Route
-                      </button>
-                      <span className="text-[10px] font-extrabold uppercase text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-700/60">
-                        Rank #{lead.rank || (filteredLeads.indexOf(lead) + 1)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 2GIS.ae Building & Entrances Directory Box */}
-                  {(() => {
-                    const bInfo = lead.buildingInfo || generateGisBuildingData(lead);
-                    return (
-                      <div className="bg-gradient-to-r from-emerald-950/60 via-slate-950 to-slate-900 border border-emerald-500/40 rounded-xl p-2.5 mb-2.5 shadow-sm text-xs">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 text-xs shrink-0 font-bold">
-                              🏢
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-white text-xs">{bInfo.buildingName}</span>
-                                <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40">
-                                  Makani: {bInfo.makaniNumber}
-                                </span>
-                                <span className="text-[9px] font-mono bg-emerald-950 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/30 font-bold">
-                                  100% Free • Zero API
-                                </span>
-                                <span className="text-[10px] text-slate-300 font-mono">
-                                  {bInfo.currentLeadFloor} • {bInfo.currentLeadUnit}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[10px] text-emerald-300 mt-0.5">
-                                <span>🚪 <strong>Primary Entrance:</strong> {bInfo.primaryEntrance.name}</span>
-                                <span>•</span>
-                                <span className="text-slate-300 font-medium">{bInfo.indoorBusinesses.length} co-tenants inside building</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => openGisModal(lead)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition shadow-sm"
-                              title="Inspect 2GIS building entrances and all co-tenants inside this building (Free)"
-                            >
-                              <DoorOpen className="w-3.5 h-3.5" />
-                              <span>2GIS Inside Directory</span>
-                            </button>
-                            <a
-                              href={bInfo.gisUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition"
-                              title="Open free public 2GIS.ae map in new tab"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* NFC Pitch Angle Box */}
-                  <div className="bg-amber-950/20 border border-amber-800/40 rounded-lg p-2.5 mb-2 text-xs">
-                    <div className="flex items-center gap-1 text-amber-400 font-semibold mb-0.5 text-[11px]">
-                      <Sparkles className="w-3 h-3" />
-                      <span>Sales Pitch Angle:</span>
-                    </div>
-                    <p className="text-slate-300 text-[11px] leading-relaxed">
-                      {lead.pitchAngle}
-                    </p>
-                  </div>
-
-                  {/* Years Operating vs. Review Volume Gap Box */}
-                  {lead.yearsVsReviewsGap && (
-                    <div className="bg-blue-950/30 border border-blue-800/50 rounded-lg p-2.5 mb-2 text-xs">
-                      <div className="flex items-center gap-1 text-blue-400 font-semibold mb-0.5 text-[11px]">
-                        <Clock className="w-3 h-3 text-blue-400" />
-                        <span>Years Operating vs. Review Gap Correlation:</span>
-                      </div>
-                      <p className="text-slate-200 text-[11px] leading-relaxed font-medium">
-                        {lead.yearsVsReviewsGap}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Real Verified Business Contact Box */}
-                  <div className="bg-gradient-to-r from-emerald-950/70 via-slate-950 to-emerald-950/40 border border-emerald-800/60 rounded-xl p-2.5 mb-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-inner">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center flex-shrink-0 text-emerald-400 font-bold text-xs">
-                        {lead.contactPersonName ? <UserCheck className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-                      </div>
-                      <div className="flex flex-col">
-                        {lead.contactPersonName ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-bold text-white">
-                              {lead.contactPersonName}
-                            </span>
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30">
-                              {lead.contactPersonRole || 'Verified Contact'}
-                            </span>
-                            {lead.customContactUpdated && (
-                              <span className="text-[9px] text-amber-300 bg-amber-950/80 px-1 py-0.2 rounded border border-amber-700 font-semibold">
-                                ✓ On-site Updated
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-bold text-white">
-                              Store / Front Desk
-                            </span>
-                            <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[10px] font-semibold border border-slate-700">
-                              Verified GMB Phone
-                            </span>
-                          </div>
-                        )}
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {lead.contactPersonName ? 'Direct Key Contact • Call before visit' : 'Verified Google Maps Phone • Call before visit'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto flex-shrink-0 flex-wrap">
-                      <a
-                        href={`tel:${(lead.contactDirectPhone || lead.phone).replace(/\s+/g, '')}`}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/60 text-xs font-bold font-mono flex items-center gap-1 transition"
-                        title="Call verified business line"
-                      >
-                        <PhoneCall className="w-3 h-3 text-emerald-400" />
-                        <span>{lead.contactDirectPhone || lead.phone}</span>
-                      </a>
-
-                      <a
-                        href={`https://wa.me/${(lead.contactDirectPhone || lead.phone).replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 transition shadow-sm"
-                        title="Open WhatsApp chat with business contact"
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        <span>WhatsApp</span>
-                      </a>
-
-                      <button
-                        onClick={() => openContactEditor(lead)}
-                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1 transition"
-                        title="Update owner or decision maker details after field visit"
-                      >
-                        <Edit3 className="w-3 h-3 text-amber-400" />
-                        <span>Update Contact</span>
+                        {isSelected ? 'Selected' : 'Select'}
                       </button>
                     </div>
-                  </div>
-
-                  {lead.notes && (
-                    <div className="bg-slate-950 border border-emerald-900/50 rounded-lg p-2.5 mb-2.5 text-xs">
-                      <div className="flex items-center gap-1 text-emerald-400 font-semibold mb-0.5 text-[11px]">
-                        <FileText className="w-3 h-3 text-emerald-400" />
-                        <span>On-site Field Notes:</span>
-                      </div>
-                      <p className="text-slate-300 text-[11px] leading-relaxed font-mono">
-                        {lead.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* GMB Everywhere Audit Overlay */}
-                  {auditOverlayEnabled && (
-                    <GmbAuditOverlay audit={lead.audit || generateGmbAudit(lead)} />
-                  )}
-
-                  {/* Extracted Google Maps Link row */}
-                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 mb-3 flex items-center justify-between gap-2">
-                    <div className="truncate text-[10px] font-mono text-slate-400">
-                      <span className="text-slate-500">Maps Link: </span>
-                      {lead.mapsUrl}
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => copyToClipboard(lead.mapsUrl, `url-${lead.id}`)}
-                        className="p-1 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded transition"
-                        title="Copy Google Maps Link"
-                      >
-                        {copiedId === `url-${lead.id}` ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </button>
-
-                      <a
-                        href={lead.mapsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 text-slate-300 hover:text-amber-400 bg-slate-800 hover:bg-slate-700 rounded transition text-[10px] font-medium flex items-center gap-1"
-                        title="Open real business on Google Maps"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>Maps</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Row Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800 gap-2">
-                  <div className="flex items-center gap-2 text-xs">
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded transition text-[11px]"
-                    >
-                      <Phone className="w-3 h-3 text-emerald-400" />
-                      <span className="hidden xs:inline">{lead.phone}</span>
-                    </a>
-                  </div>
-
-                  {/* The primary hand-off to App 2 */}
-                  <button
-                    onClick={() => onSelectLead(lead)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs transition shadow-sm"
-                  >
-                    <span>Send to Product Mate</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       )}
-    </>
-  )}
 
-  {/* Empty result */}
+      {/* Empty result */}
       {!loading && leads.length === 0 && !error && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
-          <MapPin className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-60" />
-          <h3 className="font-bold text-white text-sm">No businesses matched current criteria</h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Try choosing &apos;All Dubai&apos; or resetting the category filter.
+        <div className="py-12 text-center bg-[#161426] border border-[#27233e] rounded-3xl p-6">
+          <h3 className="font-bold text-white text-[16px]">No businesses found</h3>
+          <p className="text-[13px] text-[#8e8aab] mt-1">
+            Try choosing another station or category.
           </p>
           <button
+            type="button"
             onClick={() => {
-              setDistrict('All Dubai');
-              setCategory('All Categories');
+              setDistrict('Al Rigga (Red Line)');
+              setCategory("Men's Barbershops & Gents Salons");
               setReviewFilter('all');
             }}
-            className="mt-3 px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+            className="mt-4 h-9 px-5 rounded-full bg-[#110f22] border border-[#26223d] hover:bg-[#1a172e] text-white text-[13px] font-semibold transition-colors"
           >
             Reset Filters
           </button>
         </div>
       )}
 
-      {/* Mobile Floating Toggle FAB between List and Radar Map */}
-      <div className="sm:hidden fixed bottom-20 right-4 z-40 animate-bounce">
-        <button
-          type="button"
-          onClick={() => {
-            const nextMode = viewMode === 'map' ? 'list' : 'map';
-            setViewMode(nextMode);
-            window.scrollTo({ top: 350, behavior: 'smooth' });
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-2xl shadow-amber-500/50 border-2 border-white ring-2 ring-amber-400/50 active:scale-95 transition"
-        >
-          {viewMode === 'map' ? (
-            <>
-              <LayoutGrid className="w-4 h-4" />
-              <span>Show List ({filteredLeads.length})</span>
-            </>
-          ) : (
-            <>
-              <Map className="w-4 h-4" />
-              <span>Open Radar Map</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Floating Save Toast Notification */}
-      {contactSaveToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-950 border border-emerald-500 text-emerald-200 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 font-semibold text-xs animate-bounce">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{contactSaveToast}</span>
-        </div>
-      )}
-
-      {/* Edit Decision Maker Modal */}
-      {editingLeadForContact && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl relative text-left">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm sm:text-base">
-                    Update Decision Maker
-                  </h3>
-                  <p className="text-[11px] text-slate-400 truncate max-w-[260px]">
-                    {editingLeadForContact.name}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setEditingLeadForContact(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Owner / Decision Maker Name <span className="text-amber-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editContactName}
-                  onChange={(e) => setEditContactName(e.target.value)}
-                  placeholder="e.g. Mr. Tariq Al-Mansoori"
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-lg px-3 py-2 text-white placeholder-slate-500 outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Role / Designation
-                </label>
-                <input
-                  type="text"
-                  value={editContactRole}
-                  onChange={(e) => setEditContactRole(e.target.value)}
-                  placeholder="e.g. Owner & Managing Director"
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-lg px-3 py-2 text-white placeholder-slate-500 outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Direct Mobile / WhatsApp Number
-                </label>
-                <input
-                  type="text"
-                  value={editContactPhone}
-                  onChange={(e) => setEditContactPhone(e.target.value)}
-                  placeholder="e.g. +971 50 123 4567"
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-lg px-3 py-2 text-white placeholder-slate-500 font-mono outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  On-site Visit Notes / Best Time to Call
-                </label>
-                <textarea
-                  value={editContactNotes}
-                  onChange={(e) => setEditContactNotes(e.target.value)}
-                  rows={2}
-                  placeholder="e.g. Spoke with manager on-site. Owner visits Sun & Wed 11am-2pm."
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-lg px-3 py-2 text-white placeholder-slate-500 outline-none transition resize-none font-mono text-[11px]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setEditingLeadForContact(null)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveContact}
-                className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shadow-lg shadow-amber-500/20 active:scale-95"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Decision Maker</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* GMB Everywhere Importer Modal */}
-      <GmbEverywhereImporterModal
-        isOpen={isImporterOpen}
-        onClose={() => setIsImporterOpen(false)}
-        onImportLeads={handleImportLeads}
+      {/* Station Sheet */}
+      <StationPickerSheet
+        isOpen={isStationSheetOpen}
+        onClose={() => setIsStationSheetOpen(false)}
+        selectedStation={district}
+        onSelectStation={(st) => {
+          setDistrict(st);
+          fetchBusinesses(st, category);
+        }}
       />
 
-      {/* 2GIS.ae Building Entrances & Co-Tenants Directory Modal */}
+      {/* 2GIS Building Modal */}
       <GisBuildingModal
         lead={gisModalLead}
         isOpen={isGisModalOpen}
         onClose={() => setIsGisModalOpen(false)}
         onSelectCoTenant={handleSelectCoTenant}
+      />
+
+      {/* Mobile Filter Sheet */}
+      <MobileFilterSheet
+        isOpen={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        district={district}
+        setDistrict={setDistrict}
+        reviewFilter={reviewFilter}
+        setReviewFilter={setReviewFilter}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        onApply={() => fetchBusinesses(district, category)}
       />
     </div>
   );

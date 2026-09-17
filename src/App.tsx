@@ -4,7 +4,7 @@ import { App1MapScout } from './components/App1MapScout';
 import { App2ProductMate } from './components/App2ProductMate';
 import { App3NfcTool } from './components/App3NfcTool';
 import { AppTab, BusinessLead } from './types';
-import { Compass, Sparkles, Radio, Smartphone, Monitor, ChevronRight } from 'lucide-react';
+import { MapPin, Zap, Radio, Smartphone, Monitor } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('scout');
@@ -42,62 +42,60 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
-      {/* Top Device Viewport Switcher for Desktop Testing */}
-      <div className="hidden lg:flex items-center justify-between px-6 py-1.5 bg-slate-900/90 border-b border-slate-800 text-xs text-slate-400">
+    <div className="min-h-screen bg-[#0d0b18] text-white flex flex-col font-sans selection:bg-[#ec1a65]/30 selection:text-white">
+      {/* Top Device Viewport Switcher for Testing (Understated) */}
+      <div className="hidden lg:flex items-center justify-between px-6 py-2 bg-[#0c0a16] border-b border-[#1f1c33] text-xs text-[#8e8aab]">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-300">Dubai NFC B2B Suite</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-amber-400 font-medium">Step-by-step App Flow:</span>
-          <span className={activeTab === 'scout' ? 'text-white font-bold' : 'text-slate-500'}>
-            1. Search Dubai Map
+          <span className="font-bold text-white tracking-tight">ReviewRadar</span>
+          <span className="text-[#3c3755]">/</span>
+          <span className={activeTab === 'scout' ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'}>
+            1. Map Scout
           </span>
-          <ChevronRight className="w-3 h-3 text-slate-600" />
-          <span className={activeTab === 'generator' ? 'text-white font-bold' : 'text-slate-500'}>
-            2. Product Mate Review Gen
+          <span className="text-[#3c3755]">/</span>
+          <span className={activeTab === 'generator' ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'}>
+            2. Product Mate
           </span>
-          <ChevronRight className="w-3 h-3 text-slate-600" />
-          <span className={activeTab === 'nfc' ? 'text-white font-bold' : 'text-slate-500'}>
-            3. Write to NFC Tag
+          <span className="text-[#3c3755]">/</span>
+          <span className={activeTab === 'nfc' ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'}>
+            3. NFC Writer
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400">Display Mode:</span>
+        <div className="flex items-center bg-[#161426] p-0.5 rounded-full border border-[#27233e]">
           <button
             onClick={() => setIsPhoneFrame(false)}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs transition ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all ${
               !isPhoneFrame
-                ? 'bg-amber-500 text-slate-950 font-bold'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#27233e] text-white font-bold shadow-sm'
+                : 'text-[#8e8aab] hover:text-white'
             }`}
           >
             <Monitor className="w-3.5 h-3.5" />
-            <span>Fluid Responsive</span>
+            <span>Responsive</span>
           </button>
           <button
             onClick={() => setIsPhoneFrame(true)}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs transition ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all ${
               isPhoneFrame
-                ? 'bg-amber-500 text-slate-950 font-bold'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#27233e] text-white font-bold shadow-sm'
+                : 'text-[#8e8aab] hover:text-white'
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Mobile Device Frame</span>
+            <span>390px Mobile</span>
           </button>
         </div>
       </div>
 
       {/* Main Container Wrapper */}
       <div
-        className={`w-full flex-1 flex flex-col mx-auto transition-all duration-300 ${
+        className={`w-full flex-1 flex flex-col mx-auto transition-all duration-200 ${
           isPhoneFrame
-            ? 'max-w-[440px] my-4 rounded-3xl border-4 border-slate-700 shadow-2xl overflow-hidden bg-slate-950 min-h-[850px]'
-            : 'max-w-6xl'
+            ? 'max-w-[420px] my-4 rounded-[40px] border-4 border-[#27233e] shadow-2xl overflow-hidden bg-[#0d0b18] min-h-[850px]'
+            : 'max-w-xl'
         }`}
       >
-        {/* App Header with Dubai Clock & Tabs */}
+        {/* App Header matching the image */}
         <AppHeader
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -106,8 +104,8 @@ export default function App() {
           writtenCount={writtenCount}
         />
 
-        {/* Dynamic App Body View */}
-        <main className="flex-1 p-2 sm:p-4 pb-20 sm:pb-8">
+        {/* Dynamic Tab Body View */}
+        <main className="flex-1 px-3.5 pt-3 pb-24 sm:pb-12">
           {activeTab === 'scout' && (
             <App1MapScout
               onSelectLead={handleSelectLead}
@@ -131,44 +129,54 @@ export default function App() {
           )}
         </main>
 
-        {/* Mobile Sticky Bottom Floating Navigation Dock */}
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-3 flex items-center justify-around select-none shadow-2xl">
+        {/* Bottom Navigation Dock matching image.png exactly */}
+        <nav
+          aria-label="Bottom Navigation"
+          className="fixed bottom-0 left-0 right-0 z-50 bg-[#0e0c19]/95 backdrop-blur-xl border-t border-[#201d36] pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-4 flex items-center justify-around select-none"
+        >
+          {/* Tab 1: Map Scout */}
           <button
             id="nav-dock-scout"
+            type="button"
             onClick={() => setActiveTab('scout')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 ${
-              activeTab === 'scout' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center min-w-[100px] min-h-[48px] py-1 px-3 rounded-2xl transition-all duration-150 ${
+              activeTab === 'scout'
+                ? 'bg-[#381423] border border-[#ec1a65]/40 text-[#ff5c8a] font-bold shadow-lg shadow-[#ec1a65]/10'
+                : 'text-[#7e7b96] hover:text-white'
             }`}
           >
-            <Compass className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight">1. Map Scout</span>
+            <MapPin className={`w-4 h-4 mb-0.5 ${activeTab === 'scout' ? 'text-[#ff5c8a]' : 'text-[#7e7b96]'}`} />
+            <span className="text-[12px] tracking-tight">1. Map Scout</span>
           </button>
 
+          {/* Tab 2: Product Mate */}
           <button
             id="nav-dock-generator"
+            type="button"
             onClick={() => setActiveTab('generator')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 ${
-              activeTab === 'generator' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center min-w-[100px] min-h-[48px] py-1 px-3 rounded-2xl transition-all duration-150 ${
+              activeTab === 'generator'
+                ? 'bg-[#381423] border border-[#ec1a65]/40 text-[#ff5c8a] font-bold shadow-lg shadow-[#ec1a65]/10'
+                : 'text-[#7e7b96] hover:text-white'
             }`}
           >
-            <Sparkles className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight">2. Product Mate</span>
+            <Zap className={`w-4 h-4 mb-0.5 ${activeTab === 'generator' ? 'text-[#ff5c8a]' : 'text-[#7e7b96]'}`} />
+            <span className="text-[12px] tracking-tight">2. Product Mate</span>
           </button>
 
+          {/* Tab 3: NFC Writer */}
           <button
             id="nav-dock-nfc"
+            type="button"
             onClick={() => setActiveTab('nfc')}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 px-3 rounded-xl transition active:scale-95 relative ${
-              activeTab === 'nfc' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center min-w-[100px] min-h-[48px] py-1 px-3 rounded-2xl transition-all duration-150 ${
+              activeTab === 'nfc'
+                ? 'bg-[#381423] border border-[#ec1a65]/40 text-[#ff5c8a] font-bold shadow-lg shadow-[#ec1a65]/10'
+                : 'text-[#7e7b96] hover:text-white'
             }`}
           >
-            <Radio className="w-5 h-5" />
-            <span className="text-[10px] tracking-tight">3. NFC Tool</span>
-            {writtenCount > 0 && (
-              <span className="absolute top-0.5 right-2 w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[9px] flex items-center justify-center">
-                {writtenCount}
-              </span>
-            )}
+            <Radio className={`w-4 h-4 mb-0.5 ${activeTab === 'nfc' ? 'text-[#ff5c8a]' : 'text-[#7e7b96]'}`} />
+            <span className="text-[12px] tracking-tight">3. NFC Writer</span>
           </button>
         </nav>
       </div>

@@ -37,10 +37,10 @@ export const NfcCardPreview: React.FC<NfcCardPreviewProps> = ({
         };
       case 'google_clean':
         return {
-          cardBg: 'bg-gradient-to-br from-white via-slate-50 to-slate-100 border-slate-300 text-slate-900 shadow-slate-400/20',
+          cardBg: 'bg-gradient-to-br from-white via-neutral-50 to-neutral-100 border-neutral-300 text-neutral-900 shadow-neutral-400/20',
           accent: 'text-blue-600',
-          goldBadge: 'bg-amber-400 text-slate-950',
-          foilBorder: 'border-slate-300',
+          goldBadge: 'bg-amber-400 text-neutral-950',
+          foilBorder: 'border-neutral-300',
         };
       case 'instagram_sunset':
         return {
@@ -51,7 +51,7 @@ export const NfcCardPreview: React.FC<NfcCardPreviewProps> = ({
         };
       case 'dubai_emerald':
         return {
-          cardBg: 'bg-gradient-to-br from-emerald-950 via-slate-950 to-teal-900 border-emerald-500/40 text-emerald-100 shadow-emerald-950/40',
+          cardBg: 'bg-gradient-to-br from-emerald-950 via-[#07070d] to-teal-900 border-emerald-500/40 text-emerald-100 shadow-emerald-950/40',
           accent: 'text-emerald-400',
           goldBadge: 'bg-gradient-to-r from-emerald-400 to-teal-300 text-neutral-950',
           foilBorder: 'border-emerald-400/30',
@@ -77,7 +77,7 @@ export const NfcCardPreview: React.FC<NfcCardPreviewProps> = ({
           onClick={() => setShowBack(!showBack)}
           className={`w-full h-full rounded-2xl p-5 border-2 shadow-2xl transition-all duration-500 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
             styles.cardBg
-          } ${isSimulatingTap ? 'scale-95 ring-4 ring-amber-400/60 ring-offset-2 ring-offset-slate-900' : 'hover:scale-[1.02]'}`}
+          } ${isSimulatingTap ? 'scale-95 ring-4 ring-amber-400/60 ring-offset-2 ring-offset-[#101019]' : 'hover:scale-[1.02]'}`}
         >
           {/* Subtle glossy sheen reflection overlay */}
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.07] to-transparent pointer-events-none" />
@@ -187,21 +187,21 @@ export const NfcCardPreview: React.FC<NfcCardPreviewProps> = ({
       </div>
 
       {/* Card Controls & Flip Hint */}
-      <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
+      <div className="flex items-center gap-3 mt-3 text-xs text-white/50">
         <button
           onClick={() => setShowBack(!showBack)}
-          className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 transition"
+          className="flex items-center gap-1.5 text-white/80 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 transition"
         >
-          <ArrowRightLeft className="w-3 h-3" />
+          <ArrowRightLeft className="w-3.5 h-3.5 text-violet-400" />
           <span>Flip to {showBack ? 'Front' : 'Back'}</span>
         </button>
 
         {onTapSimulator && (
           <button
             onClick={onTapSimulator}
-            className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 bg-amber-950/40 hover:bg-amber-950/60 px-3 py-1 rounded-lg border border-amber-800/60 font-semibold transition"
+            className="flex items-center gap-1.5 text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 px-3.5 py-1.5 rounded-xl border border-cyan-500/30 font-semibold transition shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             <span>Simulate Customer Tap</span>
           </button>
         )}

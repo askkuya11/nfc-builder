@@ -27,6 +27,40 @@ export interface RealDubaiBusiness {
   verifiedReal: boolean;
 }
 
+export const DUBAI_METRO_STATIONS = [
+  'Al Rigga (Red Line)',
+  'DCC Area / Deira City Centre (Red Line)',
+  'Union Metro (Red & Green Line Interchange)',
+  'Salah Al Din (Green Line)',
+  'BurJuman (Red & Green Line Interchange)',
+  'Baniyas Square (Green Line)',
+  'Abu Baker Al Siddique (Green Line)',
+  'Al Fahidi / Meena Bazaar (Green Line)',
+  'ADCB / Karama (Red Line)',
+  'Business Bay (Red Line)',
+  'Mall of the Emirates / MOE (Red Line)',
+  'DMCC / JLT (Red Line)',
+  'Sobha Realty / Dubai Marina (Red Line)',
+];
+
+export const DUBAI_GENERAL_DISTRICTS = [
+  'All Dubai',
+  'Deira',
+  'Downtown Dubai',
+  'Dubai Marina',
+  'JBR (Jumeirah Beach Residence)',
+  'Al Barsha',
+  'JLT (Jumeirah Lake Towers)',
+  'Karama',
+  'Palm Jumeirah',
+  'Dubai Hills',
+];
+
+export const DUBAI_DISTRICTS = [
+  ...DUBAI_METRO_STATIONS,
+  ...DUBAI_GENERAL_DISTRICTS,
+];
+
 export const REAL_DUBAI_BUSINESSES: RealDubaiBusiness[] = [
   // --- DOWNTOWN DUBAI & BUSINESS BAY ---
   {

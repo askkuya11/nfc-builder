@@ -123,12 +123,12 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-[#101019] border border-white/15 rounded-3xl shadow-[0_0_60px_rgba(251,146,60,0.15)] overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 flex items-start justify-between gap-3">
+        <div className="p-4 sm:p-5 border-b border-white/10 bg-gradient-to-r from-[#101019] via-[#07070d] to-amber-950/20 flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mt-0.5">
+            <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mt-0.5">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
@@ -136,19 +136,19 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
                 <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Import GMB Everywhere™ Data
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                   CSV / JSON
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                Import exported leads from the <strong className="text-amber-400">GMB Everywhere Chrome extension</strong>. Automatically parses audit points: <span className="text-slate-200 font-medium">Category Match, Profile Completeness, Review Velocity, &amp; Photos Count</span>.
+              <p className="text-xs text-white/60 mt-0.5 leading-relaxed">
+                Import exported leads from the <strong className="text-amber-400">GMB Everywhere Chrome extension</strong>. Automatically parses audit points: <span className="text-white/80 font-medium">Category Match, Profile Completeness, Review Velocity, &amp; Photos Count</span>.
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg transition"
+            className="p-1.5 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition"
             title="Close modal"
           >
             <X className="w-4 h-4" />
@@ -156,15 +156,15 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
         </div>
 
         {/* Quick Sample Action Bar */}
-        <div className="px-4 sm:px-5 py-2.5 bg-slate-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+        <div className="px-4 sm:px-5 py-2.5 bg-[#07070d] border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-white/50">
             <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
             <span>Need sample data to test?</span>
           </div>
           <button
             type="button"
             onClick={handleLoadSample}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-xs font-semibold transition"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-xs font-semibold transition"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Load Sample GMB Everywhere Export (Al Rigga Clinics &amp; Cafes)</span>
@@ -174,14 +174,14 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
         {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
           {/* Method Tabs */}
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+          <div className="flex items-center gap-2 border-b border-white/10 pb-2">
             <button
               type="button"
               onClick={() => setImportTab('paste')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 importTab === 'paste'
-                  ? 'bg-amber-500 text-slate-950'
-                  : 'text-slate-400 hover:text-white bg-slate-800/60'
+                  ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold shadow-sm shadow-violet-500/20'
+                  : 'text-white/50 hover:text-white bg-white/5 border border-white/5'
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
@@ -190,10 +190,10 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
             <button
               type="button"
               onClick={() => setImportTab('file')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 importTab === 'file'
-                  ? 'bg-amber-500 text-slate-950'
-                  : 'text-slate-400 hover:text-white bg-slate-800/60'
+                  ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold shadow-sm shadow-violet-500/20'
+                  : 'text-white/50 hover:text-white bg-white/5 border border-white/5'
               }`}
             >
               <UploadCloud className="w-3.5 h-3.5" />
@@ -204,7 +204,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
           {/* Paste Tab */}
           {importTab === 'paste' && (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">
                 Paste GMB Everywhere export text (CSV rows or JSON array)
               </label>
               <textarea
@@ -212,7 +212,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
                 onChange={(e) => handleParse(e.target.value)}
                 placeholder={`Business Name,Primary Category,Review Count,Rating,Category Match,Profile Completeness,Review Velocity,Photos Count,District,Address,Phone\n"Al Rigga Dental Clinic","Dental Clinic",38,4.3,"100% Primary Match",72,"+0.7 rev/mo (Stagnant)",18,"Al Rigga","Al Rigga Rd, Deira, Dubai","+971 4 223 9988"`}
                 rows={6}
-                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500 leading-relaxed resize-y"
+                className="w-full bg-[#07070d] border border-white/15 rounded-2xl p-3 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-amber-500 leading-relaxed resize-y"
               />
             </div>
           )}
@@ -227,10 +227,10 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                className={`border-2 border-dashed rounded-2xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center ${
                   isDragging
                     ? 'border-amber-400 bg-amber-500/10'
-                    : 'border-slate-700 bg-slate-950/60 hover:border-slate-600'
+                    : 'border-white/15 bg-[#07070d] hover:border-white/30'
                 }`}
                 onClick={() => document.getElementById('gmb-file-input')?.click()}
               >
@@ -249,7 +249,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
                 <p className="text-sm font-semibold text-white">
                   {fileName ? fileName : 'Drop your GMB Everywhere CSV or JSON file here'}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-white/40 mt-1">
                   or click to select from your computer
                 </p>
               </div>
@@ -258,7 +258,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
 
           {/* Error Message */}
           {parseError && (
-            <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-xl text-red-200 text-xs flex items-center gap-2">
+            <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-2xl text-red-200 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
               <span>{parseError}</span>
             </div>
@@ -266,7 +266,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
 
           {/* Parsed Preview Section */}
           {parsedPreview.length > 0 && (
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3">
+            <div className="bg-[#07070d] border border-white/10 rounded-2xl p-3 sm:p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -280,25 +280,25 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
               </div>
 
               {/* Mini preview items list */}
-              <div className="max-h-48 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-850">
+              <div className="max-h-48 overflow-y-auto space-y-2 pr-1 divide-y divide-white/10">
                 {parsedPreview.map((lead, idx) => (
                   <div key={idx} className="pt-2 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                     <div className="min-w-0">
-                      <div className="font-bold text-slate-200 truncate">{lead.name}</div>
-                      <div className="text-[11px] text-slate-400 truncate">
+                      <div className="font-bold text-white truncate">{lead.name}</div>
+                      <div className="text-[11px] text-white/50 truncate">
                         {lead.category} • {lead.reviewCount} reviews ({lead.rating}★)
                       </div>
                     </div>
 
                     {lead.audit && (
                       <div className="flex items-center gap-2 text-[10px] font-mono flex-shrink-0">
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/50 text-emerald-300">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/50 text-emerald-300">
                           {lead.audit.profileCompleteness}% Complete
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-800/50 text-amber-300">
+                        <span className="px-2 py-0.5 rounded-full bg-amber-950/60 border border-amber-800/50 text-amber-300">
                           {lead.audit.reviewVelocity}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/50 text-cyan-300">
+                        <span className="px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-800/50 text-cyan-300">
                           {lead.audit.photosCount} Photos
                         </span>
                       </div>
@@ -308,12 +308,12 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
               </div>
 
               {/* Import Options (Replace vs Append) */}
-              <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="text-xs text-slate-400 font-medium">
+              <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="text-xs text-white/50 font-medium">
                   Destination Mode:
                 </div>
                 <div className="flex items-center gap-3 text-xs">
-                  <label className="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-white/80 cursor-pointer">
                     <input
                       type="radio"
                       name="importMode"
@@ -324,7 +324,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
                     />
                     <span>Replace Current List</span>
                   </label>
-                  <label className="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-white/80 cursor-pointer">
                     <input
                       type="radio"
                       name="importMode"
@@ -342,11 +342,11 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-t border-white/10 bg-[#07070d] flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold transition"
           >
             Cancel
           </button>
@@ -355,7 +355,7 @@ export const GmbEverywhereImporterModal: React.FC<GmbEverywhereImporterModalProp
             type="button"
             disabled={parsedPreview.length === 0}
             onClick={handleConfirmImport}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-400 hover:to-cyan-400 active:scale-95 text-white font-bold text-xs shadow-lg shadow-violet-500/25 transition disabled:opacity-50"
           >
             <span>Import {parsedPreview.length > 0 ? `${parsedPreview.length} Leads` : ''} into Scout &amp; Radar</span>
             <ArrowRight className="w-4 h-4" />
