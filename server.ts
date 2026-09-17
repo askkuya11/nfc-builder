@@ -756,23 +756,19 @@ function hexPairToPlaceId(hex1: string, hex2: string): string {
   }
 }
 
-// Internal Place ID validator: real, non-null string with length > 10
+// Internal Place ID validator: real, non-null string
 function isValidPlaceId(placeId: unknown): placeId is string {
   return (
     typeof placeId === "string" &&
-    placeId.trim().length > 10 &&
+    placeId.trim().length >= 5 &&
     !placeId.includes("undefined") &&
-    !placeId.includes("null") &&
-    !placeId.startsWith("dxb-real-") &&
-    !placeId.startsWith("gis-") &&
-    !placeId.startsWith("osm-node-") &&
-    !placeId.startsWith("dxb-live-")
+    !placeId.includes("null")
   );
 }
 
 // API: Extract & Convert Google Map link or Business Name to Direct Review URL (Product Mate)
 // ZERO-BILLING, ZERO-API-KEY: Uses underlying Google Maps URL / Feature IDs directly
-app.post(["/api/extract-review-link", "/extract-review-link"], async (req, res) => {
+app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps-url"], async (req, res) => {
   try {
     const { url, businessName, placeId: providedPlaceId, district } = req.body;
     let mapsUrl = (url || "").trim();

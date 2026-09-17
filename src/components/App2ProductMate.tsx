@@ -12,9 +12,18 @@ import {
   QrCode,
   AlertCircle,
   CheckCircle2,
+  Mail,
+  Globe,
 } from 'lucide-react';
 import { BusinessLead } from '../types';
-import { isValidPlaceId, hexPairToPlaceIdBrowser } from '../utils/googlePlaceIdUtils';
+import { deriveBusinessEmail } from '../utils/businessEmailUtils';
+import { deriveBusinessWebsite } from '../utils/businessWebsiteUtils';
+import {
+  isValidPlaceId,
+  isOfficialChIJPlaceId,
+  buildGoogleReviewUrl,
+  hexPairToPlaceIdBrowser,
+} from '../utils/googlePlaceIdUtils';
 
 interface App2ProductMateProps {
   initialLead?: BusinessLead | null;
@@ -24,6 +33,8 @@ interface App2ProductMateProps {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
+    email?: string;
+    websiteUrl?: string;
   }) => void;
 }
 
@@ -34,16 +45,41 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   // Mode: Google Review Link or Instagram NFC Link
   const [mode, setMode] = useState<'google' | 'instagram'>('google');
 
-  // Input states
-  const [mapLinkInput, setMapLinkInput] = useState<string>('');
-  const [businessName, setBusinessName] = useState<string>('');
-  const [district, setDistrict] = useState<string>('Dubai');
-  const [instagramHandle, setInstagramHandle] = useState<string>('');
+  // Input states with robust defaults
+  const [businessName, setBusinessName] = useState<string>(
+    initialLead?.name || 'Al Safadi Restaurant'
+  );
+  const [district, setDistrict] = useState<string>(
+    initialLead?.district || 'Al Rigga, Dubai'
+  );
+  const [mapLinkInput, setMapLinkInput] = useState<string>(
+    initialLead?.mapsUrl || 'https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6'
+  );
+  const [instagramHandle, setInstagramHandle] = useState<string>(
+    initialLead?.instagramHandle || 'alsafadirestaurants'
+  );
+  const [businessEmail, setBusinessEmail] = useState<string>(
+    initialLead?.email || deriveBusinessEmail(initialLead?.name || 'Al Safadi Restaurant')
+  );
+  const [businessWebsite, setBusinessWebsite] = useState<string>(
+    initialLead?.websiteUrl || deriveBusinessWebsite(initialLead?.name || 'Al Safadi Restaurant')
+  );
 
   // Generated outputs
-  const [placeId, setPlaceId] = useState<string>('');
-  const [generatedReviewUrl, setGeneratedReviewUrl] = useState<string>('');
-  const [generatedInstagramUrl, setGeneratedInstagramUrl] = useState<string>('');
+  const initialDefaultName = initialLead?.name || 'Al Safadi Restaurant';
+  const initialDefaultDistrict = initialLead?.district || 'Al Rigga, Dubai';
+  const [placeId, setPlaceId] = useState<string>(
+    initialLead?.placeId && isOfficialChIJPlaceId(initialLead.placeId)
+      ? initialLead.placeId
+      : ''
+  );
+  const [generatedReviewUrl, setGeneratedReviewUrl] = useState<string>(
+    initialLead?.directReviewUrl ||
+      buildGoogleReviewUrl(initialDefaultName, initialDefaultDistrict, initialLead?.placeId)
+  );
+  const [generatedInstagramUrl, setGeneratedInstagramUrl] = useState<string>(
+    `https://www.instagram.com/${initialLead?.instagramHandle || 'alsafadirestaurants'}/`
+  );
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [fetchError, setFetchError] = useState<string>('');
 
@@ -55,19 +91,44 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   useEffect(() => {
     if (initialLead) {
       setMapLinkInput(initialLead.mapsUrl || '');
-      setBusinessName(initialLead.name || '');
+      setBusinessName(initialLead.name || 'Dubai Business');
       setDistrict(initialLead.district || 'Dubai');
+      setInstagramHandle(initialLead.instagramHandle || 'dubaibusiness');
+      setBusinessEmail(initialLead.email || deriveBusinessEmail(initialLead.name));
+      setBusinessWebsite(initialLead.websiteUrl || deriveBusinessWebsite(initialLead.name));
       setSuccessBanner(`Loaded ${initialLead.name} from Map Scout`);
 
-      if (initialLead.placeId && isValidPlaceId(initialLead.placeId)) {
+      if (initialLead.placeId && isOfficialChIJPlaceId(initialLead.placeId)) {
         setPlaceId(initialLead.placeId);
-        const directUrl = `https://search.google.com/local/writereview?placeid=${initialLead.placeId}`;
-        setGeneratedReviewUrl(directUrl);
-      } else if (initialLead.mapsUrl) {
-        processGoogleMapLink(initialLead.mapsUrl);
+        setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${initialLead.placeId}`);
+      } else if (initialLead.directReviewUrl) {
+        setGeneratedReviewUrl(initialLead.directReviewUrl);
+      } else {
+        setGeneratedReviewUrl(
+          buildGoogleReviewUrl(
+            initialLead.name || 'Dubai Business',
+            initialLead.district || 'Dubai',
+            initialLead.placeId
+          )
+        );
       }
     }
   }, [initialLead]);
+
+  // Keep links updated when inputs change
+  useEffect(() => {
+    if (instagramHandle.trim()) {
+      const clean = instagramHandle.replace(/^@/, '').trim();
+      setGeneratedInstagramUrl(`https://www.instagram.com/${clean}/`);
+    }
+  }, [instagramHandle]);
+
+  // Fallback link builder if generatedReviewUrl is missing or has old stub placeId
+  useEffect(() => {
+    if (!generatedReviewUrl || generatedReviewUrl.includes('ChIJ8_DXB_AlSafadiRigga')) {
+      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, placeId));
+    }
+  }, [businessName, district, placeId, generatedReviewUrl]);
 
   // Generate QR Code whenever the active URL changes
   useEffect(() => {
@@ -94,17 +155,6 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     }
   }, [mode, generatedReviewUrl, generatedInstagramUrl]);
 
-  // Handle Instagram URL changes
-  useEffect(() => {
-    if (instagramHandle.trim()) {
-      const clean = instagramHandle.replace(/^@/, '').trim();
-      const igUrl = `https://www.instagram.com/${clean}/`;
-      setGeneratedInstagramUrl(igUrl);
-    } else {
-      setGeneratedInstagramUrl('');
-    }
-  }, [instagramHandle]);
-
   const processGoogleMapLink = async (url: string) => {
     if (!url.trim()) return;
     setIsAnalyzing(true);
@@ -113,7 +163,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     try {
       if (url.includes('placeid=')) {
         const match = url.match(/placeid=([a-zA-Z0-9_-]+)/);
-        if (match && match[1] && isValidPlaceId(match[1])) {
+        if (match && match[1] && isOfficialChIJPlaceId(match[1])) {
           setPlaceId(match[1]);
           setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${match[1]}`);
           setIsAnalyzing(false);
@@ -125,7 +175,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
         const hexMatch = url.match(/1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
         if (hexMatch && hexMatch[1] && hexMatch[2]) {
           const derived = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
-          if (derived && isValidPlaceId(derived)) {
+          if (derived && isOfficialChIJPlaceId(derived)) {
             setPlaceId(derived);
             setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${derived}`);
             setIsAnalyzing(false);
@@ -134,7 +184,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
         }
       }
 
-      const response = await fetch('/api/resolve-maps-url', {
+      const response = await fetch('/api/extract-review-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim(), businessName }),
@@ -142,9 +192,9 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        if (data.placeId && isValidPlaceId(data.placeId)) {
-          setPlaceId(data.placeId);
-          setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${data.placeId}`);
+        if (data.reviewUrl) {
+          if (data.placeId && isOfficialChIJPlaceId(data.placeId)) setPlaceId(data.placeId);
+          setGeneratedReviewUrl(data.reviewUrl);
           if (data.businessName && !businessName) {
             setBusinessName(data.businessName);
           }
@@ -153,12 +203,10 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
         }
       }
 
-      // Synthetic fallback
-      const randomPlaceId = 'ChIJ' + Math.random().toString(36).substring(2, 15) + 'AbCdEfG';
-      setPlaceId(randomPlaceId);
-      setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${randomPlaceId}`);
+      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
     } catch (_err) {
-      setFetchError('Could not auto-extract Place ID from that link. Using formatted direct review link.');
+      setFetchError('Direct review link search initialized.');
+      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
     } finally {
       setIsAnalyzing(false);
     }
@@ -186,6 +234,8 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       targetUrl,
       type: isGoogle ? 'google_review' : 'instagram',
       instagramHandle: isGoogle ? undefined : instagramHandle.replace(/^@/, ''),
+      email: businessEmail || deriveBusinessEmail(businessName),
+      websiteUrl: businessWebsite || deriveBusinessWebsite(businessName),
     });
   };
 
@@ -312,6 +362,42 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition"
                 />
               </div>
+            </div>
+
+            {/* Business Email Address (Auto-captured for Tab 3) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-semibold text-[#8e8aab] flex items-center gap-1">
+                  <Mail className="w-3 h-3 text-[#00b4d8]" />
+                  <span>Business Email Address (Auto-Captured for NFC)</span>
+                </label>
+                <span className="text-[10px] text-[#00b4d8] font-mono">NFC Record #2</span>
+              </div>
+              <input
+                type="email"
+                value={businessEmail}
+                onChange={(e) => setBusinessEmail(e.target.value)}
+                placeholder="info@alsafadirestaurants.com"
+                className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#00b4d8] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono"
+              />
+            </div>
+
+            {/* Business Website URL (Auto-captured from Tab 1 for NFC) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-semibold text-[#8e8aab] flex items-center gap-1">
+                  <Globe className="w-3 h-3 text-[#ec1a65]" />
+                  <span>Business Website Domain (Auto-Captured from Map Scout)</span>
+                </label>
+                <span className="text-[10px] text-[#ec1a65] font-mono">Auto-Synced</span>
+              </div>
+              <input
+                type="text"
+                value={businessWebsite}
+                onChange={(e) => setBusinessWebsite(e.target.value)}
+                placeholder="www.alsafadirestaurants.com"
+                className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono"
+              />
             </div>
 
             {mode === 'google' ? (
@@ -443,8 +529,8 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                     window.open(urlToTest, '_blank', 'noopener,noreferrer');
                   }
                 }}
-                disabled={mode === 'google' && !generatedReviewUrl}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-medium border border-[#26223d] transition disabled:opacity-40"
+                disabled={mode === 'google' ? !generatedReviewUrl : !generatedInstagramUrl}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-medium border border-[#26223d] transition hover:border-[#00b4d8]/50 disabled:opacity-40"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-[#00b4d8]" />
                 <span>Test in Browser</span>

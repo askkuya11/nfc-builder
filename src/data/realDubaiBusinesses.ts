@@ -7,6 +7,8 @@ export interface RealDubaiBusiness {
   district: string;
   address: string;
   phone: string;
+  email?: string;
+  websiteUrl?: string;
   placeId?: string;
   mapsUrl: string;
   directReviewUrl: string;
@@ -27,21 +29,116 @@ export interface RealDubaiBusiness {
   verifiedReal: boolean;
 }
 
-export const DUBAI_METRO_STATIONS = [
-  'Al Rigga (Red Line)',
+export const DUBAI_RED_LINE_SEQUENCE = [
+  'Centrepoint (Red Line)',
+  'Emirates (Red Line)',
+  'Airport Terminal 3 (Red Line)',
+  'Airport Terminal 1 (Red Line)',
+  'GGICO (Red Line)',
   'DCC Area / Deira City Centre (Red Line)',
+  'Al Rigga (Red Line)',
   'Union Metro (Red & Green Line Interchange)',
-  'Salah Al Din (Green Line)',
   'BurJuman (Red & Green Line Interchange)',
-  'Baniyas Square (Green Line)',
-  'Abu Baker Al Siddique (Green Line)',
-  'Al Fahidi / Meena Bazaar (Green Line)',
   'ADCB / Karama (Red Line)',
+  'max / Al Jafiliya (Red Line)',
+  'World Trade Centre (Red Line)',
+  'Emirates Towers (Red Line)',
+  'Financial Centre (Red Line)',
+  'Burj Khalifa / Dubai Mall (Red Line)',
   'Business Bay (Red Line)',
+  'Onpassive / Al Safa (Red Line)',
+  'Equiti / Umm Al Sheif (Red Line)',
   'Mall of the Emirates / MOE (Red Line)',
-  'DMCC / JLT (Red Line)',
+  'Mashreq / Sharaf DG (Red Line)',
+  'Dubai Internet City (Red Line)',
+  'Al Khail (Red Line)',
   'Sobha Realty / Dubai Marina (Red Line)',
+  'DMCC / JLT (Red Line)',
+  'Jabal Ali (Red Line)',
+  'Ibn Battuta (Red Line)',
+  'Energy (Red Line)',
+  'Danube (Red Line)',
+  'UAE Exchange (Red Line)',
+  'Expo 2020 (Red Line)',
 ];
+
+export const DUBAI_GREEN_LINE_SEQUENCE = [
+  'Etisalat / Al Qusais (Green Line)',
+  'Al Qusais (Green Line)',
+  'DAFZA / Airport Freezone (Green Line)',
+  'Al Nahda (Green Line)',
+  'Stadium (Green Line)',
+  'Al Qiyadah (Green Line)',
+  'Abu Hail (Green Line)',
+  'Abu Baker Al Siddique (Green Line)',
+  'Salah Al Din (Green Line)',
+  'Union Metro (Red & Green Line Interchange)',
+  'Baniyas Square (Green Line)',
+  'Gold Souq (Green Line)',
+  'Al Ras (Green Line)',
+  'Al Ghubaiba (Green Line)',
+  'Al Fahidi / Meena Bazaar (Green Line)',
+  'BurJuman (Red & Green Line Interchange)',
+  'Oud Metha (Green Line)',
+  'Dubai Healthcare City (Green Line)',
+  'Al Jadaf (Green Line)',
+  'Creek (Green Line)',
+];
+
+export const DUBAI_METRO_STATIONS = Array.from(
+  new Set([...DUBAI_RED_LINE_SEQUENCE, ...DUBAI_GREEN_LINE_SEQUENCE])
+);
+
+export function getCorridorNeighbors(stationName: string): { prev: string; curr: string; next: string; line: 'red' | 'green' | 'interchange' } {
+  // Check red line first
+  const redIdx = DUBAI_RED_LINE_SEQUENCE.findIndex(
+    (s) => s.toLowerCase().includes(stationName.toLowerCase()) || stationName.toLowerCase().includes(s.toLowerCase().replace(/\(.*?\)/g, '').trim())
+  );
+  const greenIdx = DUBAI_GREEN_LINE_SEQUENCE.findIndex(
+    (s) => s.toLowerCase().includes(stationName.toLowerCase()) || stationName.toLowerCase().includes(s.toLowerCase().replace(/\(.*?\)/g, '').trim())
+  );
+
+  const isInterchange = stationName.includes('Union') || stationName.includes('BurJuman');
+
+  if (isInterchange) {
+    if (stationName.includes('Union')) {
+      return {
+        prev: 'Al Rigga (Red Line)',
+        curr: 'Union Metro (Red & Green Line Interchange)',
+        next: 'BurJuman (Red & Green Line Interchange)',
+        line: 'interchange',
+      };
+    } else {
+      return {
+        prev: 'Union Metro (Red & Green Line Interchange)',
+        curr: 'BurJuman (Red & Green Line Interchange)',
+        next: 'ADCB / Karama (Red Line)',
+        line: 'interchange',
+      };
+    }
+  }
+
+  if (redIdx !== -1) {
+    const prev = redIdx > 0 ? DUBAI_RED_LINE_SEQUENCE[redIdx - 1] : DUBAI_RED_LINE_SEQUENCE[1];
+    const curr = DUBAI_RED_LINE_SEQUENCE[redIdx];
+    const next = redIdx < DUBAI_RED_LINE_SEQUENCE.length - 1 ? DUBAI_RED_LINE_SEQUENCE[redIdx + 1] : DUBAI_RED_LINE_SEQUENCE[redIdx - 1];
+    return { prev, curr, next, line: 'red' };
+  }
+
+  if (greenIdx !== -1) {
+    const prev = greenIdx > 0 ? DUBAI_GREEN_LINE_SEQUENCE[greenIdx - 1] : DUBAI_GREEN_LINE_SEQUENCE[1];
+    const curr = DUBAI_GREEN_LINE_SEQUENCE[greenIdx];
+    const next = greenIdx < DUBAI_GREEN_LINE_SEQUENCE.length - 1 ? DUBAI_GREEN_LINE_SEQUENCE[greenIdx + 1] : DUBAI_GREEN_LINE_SEQUENCE[greenIdx - 1];
+    return { prev, curr, next, line: 'green' };
+  }
+
+  return {
+    prev: 'Deira City Centre (Red Line)',
+    curr: 'Al Rigga (Red Line)',
+    next: 'Union Metro (Red & Green Line Interchange)',
+    line: 'red',
+  };
+}
 
 export const DUBAI_GENERAL_DISTRICTS = [
   'All Dubai',

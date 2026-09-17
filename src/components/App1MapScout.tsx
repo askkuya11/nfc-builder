@@ -5,6 +5,7 @@ import {
   DUBAI_METRO_STATIONS,
   DUBAI_GENERAL_DISTRICTS,
   DUBAI_DISTRICTS,
+  getCorridorNeighbors,
 } from '../data/realDubaiBusinesses';
 export { DUBAI_METRO_STATIONS, DUBAI_GENERAL_DISTRICTS, DUBAI_DISTRICTS };
 import { generateGmbAudit } from '../utils/gmbEverywhereAudit';
@@ -32,6 +33,8 @@ import {
   Wrench,
   Dumbbell,
   ShoppingBag,
+  X,
+  MapPin,
 } from 'lucide-react';
 
 interface App1MapScoutProps {
@@ -286,33 +289,87 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
     fetchBusinesses(district, category, reviewFilter, sortBy);
   }, [district, category, reviewFilter, sortBy, fetchBusinesses]);
 
-  // Corridor station names
+  // Corridor station names with accurate line sequence resolution
   const corridorStations = useMemo(() => {
-    if (district.includes('Rigga')) {
-      return { prev: 'Deira City Centre', curr: 'Al Rigga', next: 'Union (Interchange)' };
-    } else if (district.includes('Union')) {
-      return { prev: 'Al Rigga', curr: 'Union', next: 'BurJuman (Interchange)' };
-    } else if (district.includes('BurJuman')) {
-      return { prev: 'Union', curr: 'BurJuman', next: 'ADCB (Karama)' };
-    } else {
-      return { prev: 'Previous Station', curr: parsedCurrentStation.displayName, next: 'Next Station' };
-    }
-  }, [district, parsedCurrentStation]);
+    const rawNeighbors = getCorridorNeighbors(district);
+    return {
+      prevRaw: rawNeighbors.prev,
+      currRaw: rawNeighbors.curr,
+      nextRaw: rawNeighbors.next,
+      prev: parseStationInfo(rawNeighbors.prev).displayName,
+      curr: parseStationInfo(rawNeighbors.curr).displayName,
+      next: parseStationInfo(rawNeighbors.next).displayName,
+      line: rawNeighbors.line,
+    };
+  }, [district]);
 
   return (
     <div className="flex flex-col gap-4 pb-20 max-w-xl mx-auto text-white">
-      {/* 1. TARGET METRO STATION CONTAINER (MATCHING IMAGE EXACTLY) */}
+      {/* 1. TARGET METRO STATION CONTAINER (PRODUCTION-GRADE REFINED) */}
       <section aria-label="Target Metro Station" className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3.5">
         {/* Header inside container */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrainFront className="w-4 h-4 text-[#ec1a65]" />
-            <span className="text-[15px] font-bold text-white tracking-tight">
-              Target Metro Station
-            </span>
+            <div className="w-7 h-7 rounded-full bg-[#ec1a65]/20 border border-[#ec1a65]/40 flex items-center justify-center text-[#ff5c8a]">
+              <TrainFront className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[15px] font-bold text-white tracking-tight block leading-tight">
+                Target Metro Station
+              </span>
+              <span className="text-[11px] text-[#8e8aab]">
+                Dubai Red & Green Transit Network
+              </span>
+            </div>
           </div>
-          <span className="text-[12px] text-[#8e8aab]">
-            Dubai Red & Green Lines
+          <button
+            type="button"
+            onClick={() => setIsStationSheetOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#110f22] hover:bg-[#1a172e] border border-[#26223d] text-xs font-semibold text-[#00b4d8] transition-colors"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Map View</span>
+          </button>
+        </div>
+
+        {/* Currently Active Station Spotlight */}
+        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-3 flex items-center justify-between gap-3 shadow-inner">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                parsedCurrentStation.isInterchange
+                  ? 'bg-gradient-to-br from-[#ff3366] to-[#10b981] text-white shadow-md'
+                  : parsedCurrentStation.isGreen
+                  ? 'bg-[#10b981]/20 border border-[#10b981]/40 text-[#34d399]'
+                  : 'bg-[#ff3366]/20 border border-[#ff3366]/40 text-[#ff708f]'
+              }`}
+            >
+              <TrainFront className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white truncate">
+                  {parsedCurrentStation.displayName}
+                </h3>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+                    parsedCurrentStation.isInterchange
+                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] text-white'
+                      : parsedCurrentStation.isGreen
+                      ? 'bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40'
+                      : 'bg-[#ff3366]/20 text-[#ff708f] border border-[#ff3366]/40'
+                  }`}
+                >
+                  {parsedCurrentStation.lineLabel}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#8e8aab] truncate mt-0.5">
+                {parsedCurrentStation.area} • <span className="text-[#34d399] font-medium">{filteredLeads.length} leads in vicinity</span>
+              </p>
+            </div>
+          </div>
+          <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full bg-[#381423] border border-[#ec1a65]/40 text-[10px] font-bold text-[#ff5c8a] shrink-0">
+            Active Hub
           </span>
         </div>
 
@@ -355,7 +412,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </button>
         </div>
 
-        {/* Station Search Input */}
+        {/* Station Search Input with Clear Button and Count */}
         <div className="relative flex items-center w-full">
           <Search className="w-4 h-4 text-[#8e8aab] absolute left-3.5 pointer-events-none" />
           <input
@@ -363,71 +420,246 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
             value={stationQuickSearch}
             onChange={(e) => setStationQuickSearch(e.target.value)}
             placeholder="Find station: Al Rigga, Union, BurJuman…"
-            className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-[#6d698a] transition-colors"
+            className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full pl-10 pr-10 py-2 text-xs text-white placeholder-[#6d698a] transition-colors"
           />
+          {stationQuickSearch ? (
+            <button
+              type="button"
+              onClick={() => setStationQuickSearch('')}
+              className="absolute right-3 p-1 rounded-full text-[#8e8aab] hover:text-white hover:bg-white/10 transition-colors"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <span className="absolute right-3.5 text-[10px] font-mono text-[#6d698a] pointer-events-none">
+              {quickStations.length}
+            </span>
+          )}
         </div>
 
-        {/* Station Scrollable List (as shown in image) */}
-        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl max-h-36 overflow-y-auto divide-y divide-[#1e1a33] px-3 py-1">
-          {quickStations.slice(0, 15).map((station) => {
-            const isSelected = district === station;
-            const info = parseStationInfo(station);
-            return (
-              <button
-                key={station}
-                type="button"
-                onClick={() => {
-                  setDistrict(station);
-                  fetchBusinesses(station, category);
-                }}
-                className={`w-full py-2 px-1 text-left flex items-center justify-between gap-2 hover:bg-[#1a172e] rounded-lg transition-colors ${
-                  isSelected ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'
+        {/* Station Scrollable List (Fixed clipping, custom dark scrollbar, highlighted active item) */}
+        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl max-h-44 overflow-y-auto p-1.5 space-y-1 focus:outline-none [scrollbar-width:thin] [scrollbar-color:#2f2b4a_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2f2b4a] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#423d66]">
+          {quickStations.length === 0 ? (
+            <div className="py-6 text-center text-xs text-[#8e8aab]">
+              No metro stations match &ldquo;{stationQuickSearch}&rdquo;
+            </div>
+          ) : (
+            quickStations.slice(0, 24).map((station) => {
+              const isSelected =
+                district.toLowerCase().includes(station.toLowerCase().replace(/\(.*?\)/g, '').trim()) ||
+                station.toLowerCase().includes(district.toLowerCase().replace(/\(.*?\)/g, '').trim());
+              const info = parseStationInfo(station);
+              return (
+                <button
+                  key={station}
+                  type="button"
+                  onClick={() => {
+                    setDistrict(station);
+                    fetchBusinesses(station, category);
+                  }}
+                  className={`w-full py-2 px-3 text-left flex items-center justify-between gap-2.5 rounded-xl transition-all duration-150 ${
+                    isSelected
+                      ? 'bg-[#381423] border border-[#ec1a65]/50 text-white font-bold shadow-sm'
+                      : 'bg-[#151226]/40 hover:bg-[#1a172e] border border-transparent hover:border-[#27233e] text-[#9f9cb8] hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                        info.isInterchange
+                          ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] ring-1 ring-white/30'
+                          : info.isGreen && !info.isRed
+                          ? 'bg-[#10b981]'
+                          : 'bg-[#ff3366]'
+                      }`}
+                    />
+                    <span className={`text-[13px] truncate ${isSelected ? 'text-white font-bold' : 'text-[#d6d4e8]'}`}>
+                      {info.displayName}
+                    </span>
+                    {isSelected && (
+                      <span className="hidden xs:inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#ec1a65] text-white">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-[#787498] truncate max-w-[130px]">
+                      {info.area.split('/')[0].trim()}
+                    </span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#ff5c8a] shrink-0" />}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Station Corridor Box (Interactive Metro Track Route & iOS Switch) */}
+        <div className="bg-[#24111e] border border-[#ec1a65]/40 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-lg">
+          {/* Top Corridor Control Header */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ec1a65]/20 border border-[#ec1a65]/40 flex items-center justify-center text-[#ff5c8a] shrink-0">
+                <TrainFront className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-[#ff5c8a] block leading-tight">
+                  Station Corridor
+                </span>
+                <span className="text-[10px] text-[#ff9bbb] hidden sm:block">
+                  Adjacent transit sweep on active metro line
+                </span>
+              </div>
+            </div>
+
+            {/* Custom iOS Toggle Switch for Corridor */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={scoutAdjacentCorridor}
+              onClick={() => setScoutAdjacentCorridor(!scoutAdjacentCorridor)}
+              className="flex items-center gap-2 cursor-pointer select-none group focus:outline-none"
+            >
+              <span className="text-xs font-bold text-white group-hover:text-[#ff9bbb] transition-colors">
+                Scout Adjacent Corridor
+              </span>
+              <div
+                className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                  scoutAdjacentCorridor ? 'bg-[#ec1a65]' : 'bg-[#373052]'
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      info.isGreen && !info.isRed
-                        ? 'bg-[#10b981]'
-                        : 'bg-[#ff3366]'
-                    }`}
-                  />
-                  <span className={`text-[13px] truncate ${isSelected ? 'text-white font-bold' : 'text-white font-medium'}`}>
-                    {info.displayName}
-                  </span>
-                </div>
-                <span className="text-[11px] text-[#6f6b8c] truncate shrink-0">
-                  {info.area.split('/')[0].trim()}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Station Corridor Box (Dark crimson/pink tint as in image) */}
-        <div className="bg-[#24111e] border border-[#ec1a65]/40 rounded-2xl p-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#ff5c8a]">
-              <TrainFront className="w-3.5 h-3.5" />
-              <span>Station Corridor:</span>
-            </div>
-            <label className="flex items-center gap-1.5 text-xs font-bold text-white cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={scoutAdjacentCorridor}
-                onChange={(e) => setScoutAdjacentCorridor(e.target.checked)}
-                className="accent-[#ec1a65] rounded"
-              />
-              <span>Scout Adjacent Corridor</span>
-            </label>
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                    scoutAdjacentCorridor ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </button>
           </div>
 
-          <div className="flex items-center justify-between text-xs pt-1 border-t border-[#ec1a65]/20">
-            <span className="text-[#8e8aab] truncate max-w-[120px]">{corridorStations.prev}</span>
-            <span className="font-bold text-white flex items-center gap-1 shrink-0">
-              ➔ {corridorStations.curr} ➔
-            </span>
-            <span className="text-[#8e8aab] truncate max-w-[120px] text-right">{corridorStations.next}</span>
+          {/* Interactive Metro Track Route Diagram (Pixel-Perfect 2-Row Alignment for Mobile Views) */}
+          <div className="flex flex-col gap-1 w-full pt-1 pb-1">
+            {/* Row 1: Dead-center aligned Track Rail & Node Circles */}
+            <div className="relative h-6 flex items-center justify-between px-4 w-full">
+              {/* Connecting Rail Line (Precisely pinned from center of left dot to center of right dot) */}
+              <div
+                className={`absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1.5 rounded-full transition-all duration-300 ${
+                  scoutAdjacentCorridor
+                    ? 'bg-gradient-to-r from-[#ec1a65]/40 via-[#ec1a65] to-[#ec1a65]/40 shadow-[0_0_10px_#ec1a65]'
+                    : 'bg-[#3b3252]'
+                }`}
+              />
+
+              {/* Prev Node Dot */}
+              <div className="w-1/3 flex justify-start relative z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDistrict(corridorStations.prevRaw);
+                    fetchBusinesses(corridorStations.prevRaw, category);
+                  }}
+                  className="w-5 h-5 rounded-full bg-[#161426] border-2 border-[#8e8aab] hover:border-[#ff5c8a] flex items-center justify-center transition-colors group focus:outline-none"
+                  title={`Switch to ${corridorStations.prev}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8e8aab] group-hover:bg-[#ff5c8a]" />
+                </button>
+              </div>
+
+              {/* Core Node Dot */}
+              <div className="w-1/3 flex justify-center relative z-10">
+                <div className="relative flex items-center justify-center">
+                  <span className="animate-ping absolute inset-0 rounded-full bg-[#ec1a65] opacity-50" />
+                  <div className="w-5 h-5 rounded-full bg-[#ec1a65] border-2 border-white shadow-lg shadow-[#ec1a65]/50 flex items-center justify-center relative z-10">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Next Node Dot */}
+              <div className="w-1/3 flex justify-end relative z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDistrict(corridorStations.nextRaw);
+                    fetchBusinesses(corridorStations.nextRaw, category);
+                  }}
+                  className="w-5 h-5 rounded-full bg-[#161426] border-2 border-[#8e8aab] hover:border-[#ff5c8a] flex items-center justify-center transition-colors group focus:outline-none"
+                  title={`Switch to ${corridorStations.next}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8e8aab] group-hover:bg-[#ff5c8a]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: Station Labels (Grid layout preventing text wrap vertical displacement) */}
+            <div className="grid grid-cols-3 gap-1 text-center w-full pt-1">
+              {/* Prev Station Label */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDistrict(corridorStations.prevRaw);
+                  fetchBusinesses(corridorStations.prevRaw, category);
+                }}
+                className="flex flex-col items-start text-left group w-full transition-transform active:scale-95 min-w-0"
+              >
+                <span className="text-[11px] font-semibold text-[#8e8aab] group-hover:text-white truncate w-full transition-colors">
+                  {corridorStations.prev}
+                </span>
+                <span className="text-[9px] text-[#6d698a] group-hover:text-[#ff9bbb] transition-colors">
+                  ← Prev Stop
+                </span>
+              </button>
+
+              {/* Core Station Label */}
+              <div className="flex flex-col items-center text-center w-full min-w-0">
+                <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full bg-[#ec1a65]/30 border border-[#ec1a65]/50 truncate max-w-full">
+                  {corridorStations.curr}
+                </span>
+                <span className="text-[9px] text-[#ff9bbb] font-bold mt-0.5">
+                  ● Core Station
+                </span>
+              </div>
+
+              {/* Next Station Label */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDistrict(corridorStations.nextRaw);
+                  fetchBusinesses(corridorStations.nextRaw, category);
+                }}
+                className="flex flex-col items-end text-right group w-full transition-transform active:scale-95 min-w-0"
+              >
+                <span className="text-[11px] font-semibold text-[#8e8aab] group-hover:text-white truncate w-full transition-colors">
+                  {corridorStations.next}
+                </span>
+                <span className="text-[9px] text-[#6d698a] group-hover:text-[#ff9bbb] transition-colors">
+                  Next Stop →
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Corridor Telemetry Footer */}
+          <div className="pt-2 border-t border-[#ec1a65]/20 flex items-center justify-between text-[11px]">
+            {scoutAdjacentCorridor ? (
+              <>
+                <div className="flex items-center gap-1.5 text-[#34d399] font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+                  <span>3-Station Corridor Active (+2 adjacent stops included)</span>
+                </div>
+                <span className="font-mono text-[10px] font-bold text-[#ff5c8a] bg-[#381423] px-2 py-0.5 rounded-full border border-[#ec1a65]/40 shrink-0">
+                  Triple Coverage
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[#8e8aab]">
+                  Single station focus • Tap adjacent stop nodes to navigate along the line
+                </span>
+                <span className="text-[10px] text-[#6d698a] font-mono shrink-0">1 Stop</span>
+              </>
+            )}
           </div>
         </div>
 

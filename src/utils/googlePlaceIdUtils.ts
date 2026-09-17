@@ -1,18 +1,37 @@
 /**
- * Internal validation rule:
- * Validates whether a Place ID is a valid, non-null, non-stub string with length > 10
+ * Validates whether a Place ID is an official 27+ character Google Place ID starting with ChIJ
+ */
+export function isOfficialChIJPlaceId(placeId: unknown): placeId is string {
+  if (typeof placeId !== 'string') return false;
+  const trimmed = placeId.trim();
+  return /^ChIJ[a-zA-Z0-9_-]{23,}$/.test(trimmed) && !trimmed.includes('AlSafadi');
+}
+
+/**
+ * Internal validation rule for place ID strings
  */
 export function isValidPlaceId(placeId: unknown): placeId is string {
   return (
     typeof placeId === 'string' &&
-    placeId.trim().length > 10 &&
+    placeId.trim().length >= 5 &&
     !placeId.includes('undefined') &&
-    !placeId.includes('null') &&
-    !placeId.startsWith('dxb-real-') &&
-    !placeId.startsWith('gis-') &&
-    !placeId.startsWith('osm-node-') &&
-    !placeId.startsWith('dxb-live-')
+    !placeId.includes('null')
   );
+}
+
+/**
+ * Constructs a guaranteed working Google Review URL.
+ * Uses search.google.com/local/writereview?placeid= ONLY when a real ChIJ Place ID is present.
+ * Otherwise uses the official Google Maps Search API URL to avoid 404 errors.
+ */
+export function buildGoogleReviewUrl(businessName: string, district: string, placeId?: string | null): string {
+  if (placeId && isOfficialChIJPlaceId(placeId)) {
+    return `https://search.google.com/local/writereview?placeid=${placeId.trim()}`;
+  }
+  const cleanName = businessName || 'Dubai Business';
+  const cleanDistrict = district || 'Dubai';
+  const query = encodeURIComponent(`${cleanName} ${cleanDistrict} Dubai`);
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
 /**

@@ -23,16 +23,22 @@ export const parseStationInfo = (stationString: string) => {
   else if (isGreen && !isRed) lineLabel = 'Green Line';
 
   let area = 'Dubai Central';
-  if (stationString.includes('Rigga') || stationString.includes('Deira') || stationString.includes('DCC') || stationString.includes('Union') || stationString.includes('Baniyas') || stationString.includes('Salah Al Din')) {
+  if (stationString.includes('Rigga') || stationString.includes('Deira') || stationString.includes('DCC') || stationString.includes('Union') || stationString.includes('Baniyas') || stationString.includes('Salah Al Din') || stationString.includes('Gold Souq') || stationString.includes('Al Ras')) {
     area = 'Deira Historic District';
-  } else if (stationString.includes('BurJuman') || stationString.includes('Fahidi') || stationString.includes('ADCB') || stationString.includes('Karama')) {
+  } else if (stationString.includes('BurJuman') || stationString.includes('Fahidi') || stationString.includes('ADCB') || stationString.includes('Karama') || stationString.includes('Ghubaiba') || stationString.includes('Oud Metha')) {
     area = 'Bur Dubai / Karama';
-  } else if (stationString.includes('Business Bay') || stationString.includes('Downtown')) {
-    area = 'Business Bay / Downtown';
-  } else if (stationString.includes('Mall of the Emirates') || stationString.includes('Barsha')) {
-    area = 'Al Barsha';
-  } else if (stationString.includes('DMCC') || stationString.includes('Sobha') || stationString.includes('Marina')) {
+  } else if (stationString.includes('Business Bay') || stationString.includes('Downtown') || stationString.includes('Burj Khalifa') || stationString.includes('Financial Centre') || stationString.includes('World Trade') || stationString.includes('Emirates Towers')) {
+    area = 'Downtown & DIFC';
+  } else if (stationString.includes('Mall of the Emirates') || stationString.includes('Barsha') || stationString.includes('Mashreq') || stationString.includes('Safa') || stationString.includes('Equiti')) {
+    area = 'Al Barsha / SZR';
+  } else if (stationString.includes('DMCC') || stationString.includes('Sobha') || stationString.includes('Marina') || stationString.includes('Jabal Ali') || stationString.includes('Ibn Battuta')) {
     area = 'Dubai Marina & JLT';
+  } else if (stationString.includes('Airport') || stationString.includes('Emirates') || stationString.includes('Centrepoint') || stationString.includes('GGICO') || stationString.includes('DAFZA')) {
+    area = 'Airport & Garhoud';
+  } else if (stationString.includes('Qusais') || stationString.includes('Nahda') || stationString.includes('Stadium') || stationString.includes('Qiyadah') || stationString.includes('Abu Hail') || stationString.includes('Abu Baker')) {
+    area = 'Al Qusais & Deira';
+  } else if (stationString.includes('Healthcare') || stationString.includes('Jadaf') || stationString.includes('Creek')) {
+    area = 'Dubai Creek & DHC';
   }
 
   return { displayName, lineLabel, area, isRed, isGreen, isInterchange };

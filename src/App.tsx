@@ -15,6 +15,8 @@ export default function App() {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
+    email?: string;
+    websiteUrl?: string;
   } | null>(null);
   const [writtenCount, setWrittenCount] = useState<number>(3);
   const [isPhoneFrame, setIsPhoneFrame] = useState<boolean>(false);
@@ -32,6 +34,8 @@ export default function App() {
     targetUrl: string;
     type: 'google_review' | 'instagram';
     instagramHandle?: string;
+    email?: string;
+    websiteUrl?: string;
   }) => {
     setNfcPayload(payload);
     setActiveTab('nfc');
@@ -49,15 +53,15 @@ export default function App() {
           <span className="font-bold text-white tracking-tight">ReviewRadar</span>
           <span className="text-[#3c3755]">/</span>
           <span className={activeTab === 'scout' ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'}>
-            1. Map Scout
+            Map Scout
           </span>
           <span className="text-[#3c3755]">/</span>
           <span className={activeTab === 'generator' ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'}>
-            2. Product Mate
+            Product Mate
           </span>
           <span className="text-[#3c3755]">/</span>
           <span className={activeTab === 'nfc' ? 'text-[#ff5c8a] font-bold' : 'text-[#8e8aab]'}>
-            3. NFC Writer
+            NFC Writer
           </span>
         </div>
 
@@ -89,10 +93,10 @@ export default function App() {
 
       {/* Main Container Wrapper */}
       <div
-        className={`w-full flex-1 flex flex-col mx-auto transition-all duration-200 ${
+        className={`w-full flex-1 flex flex-col mx-auto transition-all duration-200 relative ${
           isPhoneFrame
-            ? 'max-w-[420px] my-4 rounded-[40px] border-4 border-[#27233e] shadow-2xl overflow-hidden bg-[#0d0b18] min-h-[850px]'
-            : 'max-w-xl'
+            ? 'max-w-[420px] my-4 rounded-[40px] border-4 border-[#27233e] shadow-2xl overflow-hidden bg-[#0d0b18] min-h-[850px] pb-16'
+            : 'max-w-6xl pb-16 px-2 sm:px-4'
         }`}
       >
         {/* App Header matching the image */}
@@ -105,7 +109,7 @@ export default function App() {
         />
 
         {/* Dynamic Tab Body View */}
-        <main className="flex-1 px-3.5 pt-3 pb-24 sm:pb-12">
+        <main className="flex-1 px-3.5 pt-3 pb-8">
           {activeTab === 'scout' && (
             <App1MapScout
               onSelectLead={handleSelectLead}
@@ -129,10 +133,12 @@ export default function App() {
           )}
         </main>
 
-        {/* Bottom Navigation Dock matching image.png exactly */}
+        {/* Bottom Navigation Dock (Constrained perfectly inside active container width) */}
         <nav
           aria-label="Bottom Navigation"
-          className="fixed bottom-0 left-0 right-0 z-50 bg-[#0e0c19]/95 backdrop-blur-xl border-t border-[#201d36] pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-4 flex items-center justify-around select-none"
+          className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-50 bg-[#0e0c19]/95 backdrop-blur-xl border-t border-[#201d36] pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-4 flex items-center justify-around select-none w-full transition-all duration-200 ${
+            isPhoneFrame ? 'max-w-[412px] rounded-b-[36px]' : 'max-w-2xl rounded-t-3xl border-x'
+          }`}
         >
           {/* Tab 1: Map Scout */}
           <button
@@ -146,7 +152,7 @@ export default function App() {
             }`}
           >
             <MapPin className={`w-4 h-4 mb-0.5 ${activeTab === 'scout' ? 'text-[#ff5c8a]' : 'text-[#7e7b96]'}`} />
-            <span className="text-[12px] tracking-tight">1. Map Scout</span>
+            <span className="text-[12px] tracking-tight">Map Scout</span>
           </button>
 
           {/* Tab 2: Product Mate */}
@@ -161,7 +167,7 @@ export default function App() {
             }`}
           >
             <Zap className={`w-4 h-4 mb-0.5 ${activeTab === 'generator' ? 'text-[#ff5c8a]' : 'text-[#7e7b96]'}`} />
-            <span className="text-[12px] tracking-tight">2. Product Mate</span>
+            <span className="text-[12px] tracking-tight">Product Mate</span>
           </button>
 
           {/* Tab 3: NFC Writer */}
@@ -176,7 +182,7 @@ export default function App() {
             }`}
           >
             <Radio className={`w-4 h-4 mb-0.5 ${activeTab === 'nfc' ? 'text-[#ff5c8a]' : 'text-[#7e7b96]'}`} />
-            <span className="text-[12px] tracking-tight">3. NFC Writer</span>
+            <span className="text-[12px] tracking-tight">NFC Writer</span>
           </button>
         </nav>
       </div>
