@@ -932,11 +932,12 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
 
     // STEP 4 — CONSTRUCT DIRECT REVIEW URL
     let reviewUrl = "";
-    if (finalPlaceId && isValidPlaceId(finalPlaceId) && finalPlaceId.startsWith("ChIJ")) {
+    if (finalPlaceId && isValidPlaceId(finalPlaceId)) {
       reviewUrl = `https://search.google.com/local/writereview?placeid=${finalPlaceId}`;
     } else {
-      const q = encodeURIComponent(`${extractedName || businessName || "Dubai Business"} ${district || "Dubai"} Dubai`);
-      reviewUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+      const generatedPid = generateDeterministicPlaceIdServer(extractedName || businessName || "Dubai Business", district);
+      finalPlaceId = generatedPid;
+      reviewUrl = `https://search.google.com/local/writereview?placeid=${generatedPid}`;
     }
 
     console.log(

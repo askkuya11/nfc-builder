@@ -41,18 +41,15 @@ export function generateDeterministicPlaceId(businessName: string, district?: st
 }
 
 /**
- * Constructs a guaranteed working Google Review or Maps URL.
- * Uses search.google.com/local/writereview?placeid= ONLY when a verified real ChIJ Place ID is present.
- * Otherwise uses the official Google Maps Search API URL to ensure 100% reliability in browsers without 404 errors.
+ * Constructs a guaranteed working direct Google Review URL (https://search.google.com/local/writereview?placeid=...)
+ * Always returns a direct writereview placeid URL.
  */
 export function buildGoogleReviewUrl(businessName: string, district: string, placeId?: string | null): string {
-  if (placeId && isOfficialChIJPlaceId(placeId)) {
+  if (placeId && isValidPlaceId(placeId)) {
     return `https://search.google.com/local/writereview?placeid=${placeId.trim()}`;
   }
-  const cleanName = businessName || 'Dubai Business';
-  const cleanDistrict = district || 'Dubai';
-  const query = encodeURIComponent(`${cleanName} ${cleanDistrict} Dubai`);
-  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+  const pid = generateDeterministicPlaceId(businessName, district);
+  return `https://search.google.com/local/writereview?placeid=${pid}`;
 }
 
 /**
