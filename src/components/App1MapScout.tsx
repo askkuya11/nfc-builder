@@ -263,13 +263,52 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           }
         }
       } catch (_err: any) {
-        // Fallback to verified local dataset
+        // Fallback to verified local dataset with smart matching & Metro corridor expansion
         const cleanDist = targetDistrict.replace(/\(.*?\)/g, '').trim().toLowerCase();
-        const localFiltered = REAL_DUBAI_BUSINESSES.filter((b) => {
-          if (targetDistrict !== 'All Dubai' && !b.district.toLowerCase().includes(cleanDist)) return false;
-          if (targetCategory !== 'All Categories' && b.category !== targetCategory) return false;
+        let matched = REAL_DUBAI_BUSINESSES.filter((b) => {
+          if (targetDistrict !== 'All Dubai') {
+            const bDist = b.district.toLowerCase();
+            const bAddr = b.address.toLowerCase();
+            const isDistMatch = bDist.includes(cleanDist) || bAddr.includes(cleanDist) ||
+              (cleanDist.includes('dcc') && (bDist.includes('dcc') || bDist.includes('deira city centre') || bAddr.includes('port saeed'))) ||
+              (cleanDist.includes('rigga') && bDist.includes('rigga'));
+            if (!isDistMatch) return false;
+          }
+          if (targetCategory !== 'All Categories') {
+            const bCat = b.category.toLowerCase();
+            const bName = b.name.toLowerCase();
+            const tCat = targetCategory.toLowerCase();
+            const isCatMatch = bCat === tCat || bCat.includes(tCat) || tCat.includes(bCat) ||
+              (tCat.includes('restaurant') && (bCat.includes('restaurant') || bCat.includes('cafe') || bName.includes('restaurant') || bName.includes('bakery') || bName.includes('grill') || bName.includes('coffee') || bName.includes('bistro'))) ||
+              (tCat.includes('barber') && (bCat.includes('barber') || bCat.includes('gents') || bCat.includes('men'))) ||
+              (tCat.includes('dental') && (bCat.includes('dental') || bName.includes('dental'))) ||
+              (tCat.includes('clinic') && (bCat.includes('clinic') || bCat.includes('health')));
+            if (!isCatMatch) return false;
+          }
           return true;
-        }).map((b) => ({
+        });
+
+        // If station results are under 25, expand to full Metro corridor in the target category
+        if (matched.length < 25) {
+          const existingIds = new Set(matched.map((b) => b.id));
+          const extras = REAL_DUBAI_BUSINESSES.filter((b) => {
+            if (existingIds.has(b.id)) return false;
+            if (targetCategory !== 'All Categories') {
+              const bCat = b.category.toLowerCase();
+              const bName = b.name.toLowerCase();
+              const tCat = targetCategory.toLowerCase();
+              return bCat === tCat || bCat.includes(tCat) || tCat.includes(bCat) ||
+                (tCat.includes('restaurant') && (bCat.includes('restaurant') || bCat.includes('cafe') || bName.includes('restaurant') || bName.includes('bakery') || bName.includes('grill') || bName.includes('coffee') || bName.includes('bistro'))) ||
+                (tCat.includes('barber') && (bCat.includes('barber') || bCat.includes('gents') || bCat.includes('men'))) ||
+                (tCat.includes('dental') && (bCat.includes('dental') || bName.includes('dental'))) ||
+                (tCat.includes('clinic') && (bCat.includes('clinic') || bCat.includes('health')));
+            }
+            return true;
+          });
+          matched = [...matched, ...extras];
+        }
+
+        const localFiltered = matched.map((b) => ({
           ...b,
           audit: generateGmbAudit(b as any),
           buildingInfo: generateGisBuildingData(b as any),

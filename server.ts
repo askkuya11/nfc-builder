@@ -355,6 +355,35 @@ function getFilteredRealBusinesses(
     });
   }
 
+  // Corridor Fallback Expansion: If target station matches are under 25, include neighboring Metro Corridor businesses in the category
+  if (categoryMatches.length < 25 && district && district !== "All Dubai") {
+    const existingIds = new Set(categoryMatches.map(b => b.id));
+    const corridorExtras = allBusinesses.filter(b => {
+      if (existingIds.has(b.id)) return false;
+      if (!category || category === "All Categories") return true;
+
+      const cLower = category.toLowerCase().trim();
+      const bCatLower = b.category.toLowerCase().trim();
+      const bNameLower = b.name.toLowerCase().trim();
+
+      if (bCatLower === cLower || bCatLower.includes(cLower) || cLower.includes(bCatLower)) return true;
+      if (cLower.includes("restaurant") || cLower.includes("cafe")) {
+        return bCatLower.includes("restaurant") || bCatLower.includes("cafe") || bNameLower.includes("restaurant") || bNameLower.includes("cafe") || bNameLower.includes("bakery") || bNameLower.includes("grill") || bNameLower.includes("coffee") || bNameLower.includes("bistro");
+      }
+      if (cLower.includes("dental")) {
+        return bCatLower.includes("dental") || bNameLower.includes("dental") || bNameLower.includes("dentistry") || bNameLower.includes("teeth");
+      }
+      if (cLower.includes("barber") || cLower.includes("gents") || cLower.includes("men")) {
+        return bCatLower.includes("barber") || bCatLower.includes("gents") || bCatLower.includes("men") || bNameLower.includes("barber") || bNameLower.includes("gents") || bNameLower.includes("grooming");
+      }
+      if (cLower.includes("clinic") || cLower.includes("health")) {
+        return bCatLower.includes("clinic") || bCatLower.includes("health") || bCatLower.includes("medical") || bNameLower.includes("clinic") || bNameLower.includes("hospital") || bNameLower.includes("medical");
+      }
+      return false;
+    });
+    categoryMatches = [...categoryMatches, ...corridorExtras];
+  }
+
   const totalInDistrictCategory = categoryMatches.length;
 
   // 3. Filter by Review Range strictly
@@ -559,7 +588,7 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
     // Fast non-blocking live extraction with strict 800ms timeout race to prevent mobile stalls
     if (results.length < 10) {
       try {
-        const timeoutPromise = new Promise<RealDubaiBusiness[]>((resolve) => setTimeout(() => resolve([]), 800));
+        const timeoutPromise = new Promise<RealDubaiBusiness[]>((resolve) => setTimeout(() => resolve([]), 3500));
         if (targetCoords) {
           const overpassPlaces = await Promise.race([
             fetchOverpassDubaiPlaces(targetCoords.lat, targetCoords.lng, category, district),
