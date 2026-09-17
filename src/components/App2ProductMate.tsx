@@ -401,37 +401,73 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
             </div>
 
             {mode === 'google' ? (
-              /* Google Maps Link Box */
-              <div className="min-w-0">
-                <label className="block text-[11px] font-semibold text-[#8e8aab] mb-1.5">
-                  Google Maps Link or Search Link
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={mapLinkInput}
-                    onChange={(e) => setMapLinkInput(e.target.value)}
-                    placeholder="Paste Google Maps URL (e.g. https://maps.app.goo.gl/...)"
-                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
-                  />
+              /* Google Review Setup Box */
+              <div className="flex flex-col gap-3 min-w-0">
+                {/* Google Maps Link Box */}
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                    <label className="text-[11px] font-semibold text-[#8e8aab]">
+                      Google Maps Link or Place URL
+                    </label>
+                    <span className="text-[10px] text-[#00b4d8] font-mono">Auto-extracts Place ID</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={mapLinkInput}
+                      onChange={(e) => setMapLinkInput(e.target.value)}
+                      placeholder="Paste Google Maps URL (e.g. https://maps.app.goo.gl/... or https://google.com/maps/...)"
+                      className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
+                    />
+                  </div>
+
+                  {fetchError && (
+                    <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{fetchError}</span>
+                    </p>
+                  )}
+
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => processGoogleMapLink(mapLinkInput)}
+                      disabled={isAnalyzing || !mapLinkInput}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#ec1a65] to-[#a822d8] hover:opacity-90 text-white text-xs font-bold transition disabled:opacity-40 shadow-md shadow-[#ec1a65]/20"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                      <span>{isAnalyzing ? 'Extracting Place ID...' : 'Extract & Generate Review URL'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                {fetchError && (
-                  <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>{fetchError}</span>
+                {/* Google Place ID (ChIJ...) Field */}
+                <div className="min-w-0 pt-2 border-t border-[#26223d]">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                    <label className="text-[11px] font-semibold text-[#8e8aab] flex items-center gap-1">
+                      <span>Google Place ID (`ChIJ...`)</span>
+                    </label>
+                    <span className="text-[10px] text-[#34d399] font-mono">Direct 5★ Modal Trigger</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={placeId}
+                    onChange={(e) => {
+                      const newPid = e.target.value.trim();
+                      setPlaceId(newPid);
+                      if (newPid) {
+                        const cleanPid = newPid.startsWith('ChIJ') ? newPid : `ChIJ${newPid}`;
+                        setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${cleanPid}`);
+                      } else {
+                        setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district));
+                      }
+                    }}
+                    placeholder="e.g. ChIJk_FT689cXz4RgmjEHf8HKms"
+                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono min-w-0"
+                  />
+                  <p className="text-[10px] text-[#8e8aab] mt-1">
+                    Entering a Place ID generates the direct review popup link: <code className="text-[#00b4d8]">search.google.com/local/writereview?placeid=...</code>
                   </p>
-                )}
-
-                <div className="mt-2.5 flex items-center gap-2">
-                  <button
-                    onClick={() => processGoogleMapLink(mapLinkInput)}
-                    disabled={isAnalyzing || !mapLinkInput}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-semibold transition border border-[#26223d] disabled:opacity-40"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
-                    <span>{isAnalyzing ? 'Generating Review URL...' : 'Generate Review URL'}</span>
-                  </button>
                 </div>
               </div>
             ) : (

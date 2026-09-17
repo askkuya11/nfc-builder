@@ -789,20 +789,11 @@ function hexPairToPlaceId(hex1: string, hex2: string): string {
 function isOfficialChIJPlaceId(placeId: unknown): placeId is string {
   if (typeof placeId !== "string") return false;
   const trimmed = placeId.trim();
-  return (
-    /^ChIJ[a-zA-Z0-9_-]{23,}$/.test(trimmed) &&
-    !trimmed.includes("AlSafadi") &&
-    !trimmed.includes("CMFLz4R") &&
-    !trimmed.includes("wL-NYyMFLz4R") &&
-    !trimmed.includes("oVj9EyMFLz4R") &&
-    !trimmed.includes("xpDwDyMFLz4R") &&
-    !trimmed.includes("6cm0e") &&
-    !trimmed.includes("KjWrf")
-  );
+  return /^ChIJ[a-zA-Z0-9_-]{15,}$/.test(trimmed);
 }
 
 function isValidPlaceId(placeId: unknown): placeId is string {
-  return isOfficialChIJPlaceId(placeId);
+  return typeof placeId === "string" && placeId.trim().length >= 5;
 }
 
 function getVerifiedDubaiPlaceIdServer(district?: string): string {

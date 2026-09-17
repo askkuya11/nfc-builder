@@ -4,24 +4,15 @@
 export function isOfficialChIJPlaceId(placeId: unknown): placeId is string {
   if (typeof placeId !== 'string') return false;
   const trimmed = placeId.trim();
-  // Valid real ChIJ place IDs start with ChIJ, have 23+ characters, and are not pseudo-hashes
-  return (
-    /^ChIJ[a-zA-Z0-9_-]{23,}$/.test(trimmed) &&
-    !trimmed.includes('AlSafadi') &&
-    !trimmed.includes('CMFLz4R') &&
-    !trimmed.includes('wL-NYyMFLz4R') &&
-    !trimmed.includes('oVj9EyMFLz4R') &&
-    !trimmed.includes('xpDwDyMFLz4R') &&
-    !trimmed.includes('6cm0e') &&
-    !trimmed.includes('KjWrf')
-  );
+  // Valid real ChIJ place IDs start with ChIJ and have at least 15 base64url characters
+  return /^ChIJ[a-zA-Z0-9_-]{15,}$/.test(trimmed);
 }
 
 /**
  * Internal validation rule for place ID strings
  */
 export function isValidPlaceId(placeId: unknown): placeId is string {
-  return isOfficialChIJPlaceId(placeId);
+  return typeof placeId === 'string' && placeId.trim().length >= 5;
 }
 
 /**
@@ -32,16 +23,16 @@ export function getVerifiedDubaiPlaceId(district?: string): string {
   if (dist.includes('mall') || dist.includes('downtown') || dist.includes('burj')) {
     return 'ChIJ8yR5iNNdXz4RwK0X2_O7I60'; // The Dubai Mall
   }
-  return 'ChIJk_FT689cXz4RgmjEHf8HKms'; // Verified Dubai / Al Rigga / Deira
+  return 'ChIJk_FT689cXz4RgmjEHf8HKms'; // Deira / Al Rigga / Dubai City
 }
 
 /**
  * Constructs a guaranteed working direct Google Review URL (https://search.google.com/local/writereview?placeid=...)
- * NEVER generates invalid pseudo-hashes that cause Google 404 errors.
  */
 export function buildGoogleReviewUrl(businessName: string, district: string, placeId?: string | null): string {
-  if (placeId && isOfficialChIJPlaceId(placeId)) {
-    return `https://search.google.com/local/writereview?placeid=${placeId.trim()}`;
+  if (placeId && placeId.trim()) {
+    const cleanId = placeId.trim().startsWith('ChIJ') ? placeId.trim() : `ChIJ${placeId.trim()}`;
+    return `https://search.google.com/local/writereview?placeid=${cleanId}`;
   }
   const cleanName = (businessName || 'Dubai Business').trim();
   const cleanDistrict = (district || 'Dubai').trim();
