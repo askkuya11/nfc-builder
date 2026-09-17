@@ -43,8 +43,10 @@ export function buildGoogleReviewUrl(businessName: string, district: string, pla
   if (placeId && isOfficialChIJPlaceId(placeId)) {
     return `https://search.google.com/local/writereview?placeid=${placeId.trim()}`;
   }
-  const verifiedId = getVerifiedDubaiPlaceId(district);
-  return `https://search.google.com/local/writereview?placeid=${verifiedId}`;
+  const cleanName = (businessName || 'Dubai Business').trim();
+  const cleanDistrict = (district || 'Dubai').trim();
+  const query = encodeURIComponent(`${cleanName} ${cleanDistrict} Dubai`);
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
 /**

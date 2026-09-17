@@ -940,9 +940,8 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
     if (finalPlaceId && isValidPlaceId(finalPlaceId)) {
       reviewUrl = `https://search.google.com/local/writereview?placeid=${finalPlaceId}`;
     } else {
-      const verifiedPid = getVerifiedDubaiPlaceIdServer(district);
-      finalPlaceId = verifiedPid;
-      reviewUrl = `https://search.google.com/local/writereview?placeid=${verifiedPid}`;
+      const q = encodeURIComponent(`${extractedName || businessName || "Dubai Business"} ${district || "Dubai"} Dubai`);
+      reviewUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
     }
 
     console.log(
