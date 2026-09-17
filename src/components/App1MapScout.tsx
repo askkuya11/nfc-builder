@@ -14,6 +14,7 @@ import { GisBuildingModal } from './GisBuildingModal';
 import { MobileFilterSheet } from './MobileFilterSheet';
 import { StationPickerSheet, parseStationInfo } from './StationPickerSheet';
 import { generateGisBuildingData } from '../utils/gisDubaiDirectory';
+import { generateDeterministicPlaceId } from '../utils/googlePlaceIdUtils';
 import {
   Search,
   Star,
@@ -181,18 +182,20 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
     } else {
       const parentLead = gisModalLead;
       const bName = parentLead?.buildingInfo?.buildingName || 'Dubai Commercial Center';
+      const leadDistrict = parentLead ? parentLead.district : district;
+      const leadPid = generateDeterministicPlaceId(coTenant.name, leadDistrict);
       const syntheticLead: BusinessLead = {
         id: coTenant.id,
         name: coTenant.name,
         category: coTenant.category,
         rating: coTenant.rating,
         reviewCount: coTenant.reviewCount,
-        district: parentLead ? parentLead.district : district,
-        address: `${bName}, ${coTenant.floor}, Unit ${coTenant.unitNumber}, ${parentLead?.district || district}, Dubai`,
+        district: leadDistrict,
+        address: `${bName}, ${coTenant.floor}, Unit ${coTenant.unitNumber}, ${leadDistrict}, Dubai`,
         phone: coTenant.phone || '+971 4 222 1111',
-        placeId: `gis-${coTenant.id}`,
-        mapsUrl: `https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6`,
-        directReviewUrl: `https://search.google.com/local/writereview?placeid=${coTenant.id}`,
+        placeId: leadPid,
+        mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${coTenant.name} ${leadDistrict} Dubai`)}`,
+        directReviewUrl: `https://search.google.com/local/writereview?placeid=${leadPid}`,
         pitchOpportunity: coTenant.pitchOpportunity || 'high',
         pitchAngle: `High-value co-tenant inside ${bName}. Located at ${coTenant.floor}, Unit ${coTenant.unitNumber}.`,
         lat: parentLead?.lat,
