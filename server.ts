@@ -793,6 +793,20 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
           if (loc) resolvedUrl = loc;
         }
         htmlContent = await response.text();
+
+        // Match meta-refresh or javascript redirect inside HTML if response.url didn't update to google.com
+        if (htmlContent && (!resolvedUrl || resolvedUrl === mapsUrl || !resolvedUrl.includes("google.com/maps"))) {
+          const refreshMatch = htmlContent.match(/<meta[^>]*http-equiv=["']?refresh["']?[^>]*url=([^"'>]+)/i) ||
+                               htmlContent.match(/window\.location\.replace\(["']([^"']+)["']\)/i) ||
+                               htmlContent.match(/window\.location\s*=\s*["']([^"']+)["']/i);
+          if (refreshMatch) {
+            let extractedUrl = refreshMatch[1].replace(/&amp;/g, "&").trim();
+            if (extractedUrl.startsWith("/")) {
+              extractedUrl = "https://www.google.com" + extractedUrl;
+            }
+            resolvedUrl = extractedUrl;
+          }
+        }
       } catch {
         // Keep mapsUrl if redirect fetch fails
       }
@@ -838,8 +852,29 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
       }
     }
 
-    // 4. Fetch the long resolved URL if we still don't have a Place ID and scan its HTML
-    if (!finalPlaceId && resolvedUrl) {
+    // 4. Scan HTML body for Hex Feature pair (e.g. 0x...:0x...)
+    if (!finalPlaceId && htmlContent) {
+      const htmlHexMatch = htmlContent.match(/(0x[0-9a-fA-F]{12,16}):(0x[0-9a-fA-F]{12,16})/);
+      if (htmlHexMatch) {
+        const calculatedPid = hexPairToPlaceId(htmlHexMatch[1], htmlHexMatch[2]);
+        if (isValidPlaceId(calculatedPid)) {
+          finalPlaceId = calculatedPid;
+        }
+      }
+      
+      if (!finalPlaceId) {
+        const arrayHexMatch = htmlContent.match(/\["(0x[0-9a-fA-F]{12,16})",\s*"(0x[0-9a-fA-F]{12,16})"\]/);
+        if (arrayHexMatch) {
+          const calculatedPid = hexPairToPlaceId(arrayHexMatch[1], arrayHexMatch[2]);
+          if (isValidPlaceId(calculatedPid)) {
+            finalPlaceId = calculatedPid;
+          }
+        }
+      }
+    }
+
+    // 5. Fetch the long resolved URL if we still don't have a Place ID and scan its HTML
+    if (!finalPlaceId && resolvedUrl && resolvedUrl !== mapsUrl) {
       try {
         const response = await fetch(resolvedUrl, {
           method: "GET",
@@ -849,16 +884,39 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
           },
         });
         const extraHtml = await response.text();
+        
+        // Scan extraHtml for ChIJ Place ID
         const extraPidMatch = extraHtml.match(/(ChIJ[a-zA-Z0-9_-]{23,30})/);
         if (extraPidMatch && isValidPlaceId(extraPidMatch[1])) {
           finalPlaceId = extraPidMatch[1];
+        }
+        
+        // Scan extraHtml for Hex Feature ID pair
+        if (!finalPlaceId) {
+          const extraHexMatch = extraHtml.match(/(0x[0-9a-fA-F]{12,16}):(0x[0-9a-fA-F]{12,16})/);
+          if (extraHexMatch) {
+            const calculatedPid = hexPairToPlaceId(extraHexMatch[1], extraHexMatch[2]);
+            if (isValidPlaceId(calculatedPid)) {
+              finalPlaceId = calculatedPid;
+            }
+          }
+        }
+        
+        if (!finalPlaceId) {
+          const extraArrayHexMatch = extraHtml.match(/\["(0x[0-9a-fA-F]{12,16})",\s*"(0x[0-9a-fA-F]{12,16})"\]/);
+          if (extraArrayHexMatch) {
+            const calculatedPid = hexPairToPlaceId(extraArrayHexMatch[1], extraArrayHexMatch[2]);
+            if (isValidPlaceId(calculatedPid)) {
+              finalPlaceId = calculatedPid;
+            }
+          }
         }
       } catch {
         // Safe skip
       }
     }
 
-    // 5. Extract Google Maps 64-bit Hex Feature ID pair (!1s0x...:0x... or 0x...:0x...) and convert to exact Place ID
+    // 6. Extract Google Maps 64-bit Hex Feature ID pair from URL directly and convert to exact Place ID
     if (!finalPlaceId && resolvedUrl) {
       const hexMatch = resolvedUrl.match(/!1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) ||
                        resolvedUrl.match(/1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) ||
@@ -868,6 +926,155 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
         if (isValidPlaceId(calculatedPid)) {
           finalPlaceId = calculatedPid;
         }
+      }
+    }
+
+    // 6.5. Direct zero-quota Google Maps Search scraping fallback
+    if (!finalPlaceId) {
+      try {
+        const searchQuery = (extractedName || businessName || mapsUrl || "").trim();
+        let cleanQuery = searchQuery;
+        if (searchQuery.includes("query=")) {
+          const qMatch = searchQuery.match(/[?&]query=([^&]+)/);
+          if (qMatch) {
+            cleanQuery = decodeURIComponent(qMatch[1].replace(/\+/g, " "));
+          }
+        }
+        
+        if (cleanQuery && cleanQuery.length > 2) {
+          // If cleanQuery contains a hyphen (e.g. "Business Name - Suffix"), split it and take the first part
+          const searchTerms: string[] = [];
+          if (cleanQuery.includes(" - ")) {
+            const firstPart = cleanQuery.split(" - ")[0].trim();
+            if (firstPart.length > 2) {
+              searchTerms.push(`${firstPart} Dubai`);
+              searchTerms.push(firstPart);
+            }
+          } else if (cleanQuery.includes("-")) {
+            const firstPart = cleanQuery.split("-")[0].trim();
+            if (firstPart.length > 2) {
+              searchTerms.push(`${firstPart} Dubai`);
+              searchTerms.push(firstPart);
+            }
+          }
+          
+          // Always append the full query as a fallback
+          searchTerms.push(cleanQuery);
+
+          // Iterate through search variations to find a valid Place ID
+          for (const term of searchTerms) {
+            if (finalPlaceId) break;
+            
+            const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(term)}`;
+            console.log(`[Scraper Fallback] Fetching direct maps search URL for: "${term}"`);
+            const response = await fetch(searchUrl, {
+              method: "GET",
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+              },
+            });
+            
+            if (response.ok) {
+              const searchHtml = await response.text();
+              
+              // Search for ChIJ Place ID
+              const chijMatch = searchHtml.match(/(ChIJ[a-zA-Z0-9_-]{23,30})/);
+              if (chijMatch && isValidPlaceId(chijMatch[1])) {
+                finalPlaceId = chijMatch[1];
+                console.log(`[Scraper Fallback] Successfully matched Place ID from search page for term "${term}": ${finalPlaceId}`);
+                break;
+              }
+              
+              // Search for Hex Feature ID pair
+              if (!finalPlaceId) {
+                const hexMatch = searchHtml.match(/(0x[0-9a-fA-F]{12,16}):(0x[0-9a-fA-F]{12,16})/);
+                if (hexMatch) {
+                  const calculatedPid = hexPairToPlaceId(hexMatch[1], hexMatch[2]);
+                  if (isValidPlaceId(calculatedPid)) {
+                    finalPlaceId = calculatedPid;
+                    console.log(`[Scraper Fallback] Successfully matched Hex pair from search page for term "${term}": ${finalPlaceId}`);
+                    break;
+                  }
+                }
+              }
+              
+              // Search for array hex format
+              if (!finalPlaceId) {
+                const arrayHexMatch = searchHtml.match(/\["(0x[0-9a-fA-F]{12,16})",\s*"(0x[0-9a-fA-F]{12,16})"\]/);
+                if (arrayHexMatch) {
+                  const calculatedPid = hexPairToPlaceId(arrayHexMatch[1], arrayHexMatch[2]);
+                  if (isValidPlaceId(calculatedPid)) {
+                    finalPlaceId = calculatedPid;
+                    console.log(`[Scraper Fallback] Successfully matched Array Hex from search page for term "${term}": ${finalPlaceId}`);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Scraper Fallback] Direct search scraping failed:", err);
+      }
+    }
+
+    // 7. Gemini Search Grounding Fallback: If no Place ID was found, use Gemini to search Google live and find it
+    if (!finalPlaceId && ai) {
+      try {
+        const searchQuery = (extractedName || businessName || mapsUrl || "").trim();
+        if (searchQuery && searchQuery.length > 3) {
+          console.log(`[Gemini Fallback] Searching Google live for Place ID of: "${searchQuery}"`);
+          const prompt = `Find the exact Google Maps Place ID (the 27-character string starting with ChIJ, e.g. ChIJgUbEo8cfqokR5lP9_Wh_DaM) for the business: "${searchQuery}".
+You MUST use your Google Search tool to find "Google Maps Place ID ${searchQuery}" or similar query.
+Verify that the Place ID belongs to this business. If you find a CID, locate the corresponding ChIJ Place ID.
+Return ONLY a valid JSON object in this format:
+{
+  "placeId": "ChIJ...",
+  "businessName": "Verified Business Name",
+  "address": "Verified Address"
+}
+If you absolutely cannot find any valid ChIJ Place ID, return exactly:
+{
+  "placeId": ""
+}`;
+          const geminiRes = await ai.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents: prompt,
+            config: {
+              tools: [{ googleSearch: {} }],
+            },
+          });
+
+          if (geminiRes && geminiRes.text) {
+            let cleanText = geminiRes.text.trim();
+            if (cleanText.includes("```")) {
+              const codeBlockMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+              if (codeBlockMatch) {
+                cleanText = codeBlockMatch[1].trim();
+              }
+            }
+            try {
+              const jsonResult = JSON.parse(cleanText);
+              if (jsonResult && isValidPlaceId(jsonResult.placeId)) {
+                finalPlaceId = jsonResult.placeId.trim();
+                console.log(`[Gemini Fallback] Successfully extracted Place ID via search grounding: "${finalPlaceId}"`);
+                if (jsonResult.businessName) {
+                  extractedName = jsonResult.businessName;
+                }
+              }
+            } catch {
+              // Try to fallback-extract any ChIJ string from response
+              const rawMatch = cleanText.match(/(ChIJ[a-zA-Z0-9_-]{23,30})/);
+              if (rawMatch && isValidPlaceId(rawMatch[1])) {
+                finalPlaceId = rawMatch[1];
+                console.log(`[Gemini Fallback] Regex matched Place ID from text: "${finalPlaceId}"`);
+              }
+            }
+          }
+        }
+      } catch (geminiError: any) {
+        console.log("[Gemini Fallback] Search grounding is currently inactive or rate-limited:", geminiError?.message || geminiError);
       }
     }
 

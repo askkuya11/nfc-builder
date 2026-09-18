@@ -608,8 +608,11 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
 
                 <div className="mt-1 flex items-center gap-2">
                   <button
-                    onClick={() => processGoogleMapLink(googleInputTab === 'search' ? mapLinkInput : mapShareLinkInput)}
-                    disabled={isAnalyzing || !(googleInputTab === 'search' ? mapLinkInput : mapShareLinkInput)}
+                    onClick={() => {
+                      const targetLink = mapShareLinkInput.trim() || mapLinkInput.trim();
+                      processGoogleMapLink(targetLink);
+                    }}
+                    disabled={isAnalyzing || !(mapShareLinkInput.trim() || mapLinkInput.trim())}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-semibold transition border border-[#26223d] disabled:opacity-40"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
