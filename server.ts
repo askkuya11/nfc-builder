@@ -936,8 +936,12 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
 // Helper to convert Google Maps 64-bit Hex Feature ID pair (0x...:0x...) to official Place ID (ChIJ...)
 function hexPairToPlaceId(hex1: string, hex2: string): string {
   try {
-    const val1 = BigInt(hex1.trim());
-    const val2 = BigInt(hex2.trim());
+    // Strip any trailing non-hex characters (e.g. "km" or "m" or "!3d..." from URL query parameters)
+    const cleanH1 = hex1.trim().replace(/[^0-9a-fA-FxX]/g, "");
+    const cleanH2 = hex2.trim().replace(/[^0-9a-fA-FxX]/g, "");
+
+    const val1 = BigInt(cleanH1);
+    const val2 = BigInt(cleanH2);
 
     const buf = Buffer.alloc(20);
     buf[0] = 0x0a;
@@ -979,21 +983,36 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
     let htmlContent = "";
     if (mapsUrl.includes("maps.app.goo.gl") || mapsUrl.includes("goo.gl/maps") || mapsUrl.includes("bit.ly") || mapsUrl.includes("goo.gl")) {
       try {
-        const response = await fetch(mapsUrl, {
+        // Use redirect: "manual" first to extract the target location header.
+        // This is extremely important on Vercel as Google blocks serverless IPs from fetching full map pages.
+        const manualResponse = await fetch(mapsUrl, {
           method: "GET",
-          redirect: "follow",
+          redirect: "manual",
           headers: {
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
           },
         });
-        if (response.url) {
-          resolvedUrl = response.url;
+
+        const loc = manualResponse.headers.get("location");
+        if (loc) {
+          resolvedUrl = loc;
+          console.log("[Extract API] Intercepted 302 location header successfully:", resolvedUrl);
         } else {
-          const loc = response.headers.get("location");
-          if (loc) resolvedUrl = loc;
+          // Fallback to traditional follow if no location header is present (non-302 status)
+          const response = await fetch(mapsUrl, {
+            method: "GET",
+            redirect: "follow",
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+            },
+          });
+          if (response.url) {
+            resolvedUrl = response.url;
+          }
+          htmlContent = await response.text();
         }
-        htmlContent = await response.text();
       } catch {
         // Keep mapsUrl if redirect fetch fails
       }
