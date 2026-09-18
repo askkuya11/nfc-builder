@@ -114,8 +114,8 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
       id: 'rec-1',
       type: 'url',
       protocolPrefix: 'https://',
-      value: 'search.google.com/local/writereview?placeid=ChIJ8_DXB_AlSafadiRigga',
-      fullUrl: 'https://search.google.com/local/writereview?placeid=ChIJ8_DXB_AlSafadiRigga',
+      value: 'search.google.com/local/writereview?placeid=ChIxxxxxxxxxxxxxxxxxxxx',
+      fullUrl: 'https://search.google.com/local/writereview?placeid=ChIxxxxxxxxxxxxxxxxxxxx',
       description: 'URL Record: Google Direct 5-Star Review',
       bytes: 68,
     },
@@ -150,9 +150,9 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
   const [batchQueue, setBatchQueue] = useState<NfcBatchItem[]>([
     {
       id: 'batch-1',
-      businessName: 'Al Safadi Gourmet',
-      district: 'Al Rigga',
-      url: 'https://search.google.com/local/writereview?placeid=ChIJ8_DXB_AlSafadiRigga',
+      businessName: 'Dubai Gourmet Bistro',
+      district: 'Downtown Dubai',
+      url: 'https://search.google.com/local/writereview?placeid=ChIxxxxxxxxxxxxxxxxxxxx',
       type: 'google_review',
       timestamp: 'Today 10:15 AM',
       status: 'sold',

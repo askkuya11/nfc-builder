@@ -14,7 +14,6 @@ import { GisBuildingModal } from './GisBuildingModal';
 import { MobileFilterSheet } from './MobileFilterSheet';
 import { StationPickerSheet, parseStationInfo } from './StationPickerSheet';
 import { generateGisBuildingData } from '../utils/gisDubaiDirectory';
-import { generateDeterministicPlaceId } from '../utils/googlePlaceIdUtils';
 import {
   Search,
   Star,
@@ -182,20 +181,18 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
     } else {
       const parentLead = gisModalLead;
       const bName = parentLead?.buildingInfo?.buildingName || 'Dubai Commercial Center';
-      const leadDistrict = parentLead ? parentLead.district : district;
-      const leadPid = generateDeterministicPlaceId(coTenant.name, leadDistrict);
       const syntheticLead: BusinessLead = {
         id: coTenant.id,
         name: coTenant.name,
         category: coTenant.category,
         rating: coTenant.rating,
         reviewCount: coTenant.reviewCount,
-        district: leadDistrict,
-        address: `${bName}, ${coTenant.floor}, Unit ${coTenant.unitNumber}, ${leadDistrict}, Dubai`,
+        district: parentLead ? parentLead.district : district,
+        address: `${bName}, ${coTenant.floor}, Unit ${coTenant.unitNumber}, ${parentLead?.district || district}, Dubai`,
         phone: coTenant.phone || '+971 4 222 1111',
-        placeId: leadPid,
-        mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${coTenant.name} ${leadDistrict} Dubai`)}`,
-        directReviewUrl: `https://search.google.com/local/writereview?placeid=${leadPid}`,
+        placeId: `gis-${coTenant.id}`,
+        mapsUrl: `https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6`,
+        directReviewUrl: `https://search.google.com/local/writereview?placeid=${coTenant.id}`,
         pitchOpportunity: coTenant.pitchOpportunity || 'high',
         pitchAngle: `High-value co-tenant inside ${bName}. Located at ${coTenant.floor}, Unit ${coTenant.unitNumber}.`,
         lat: parentLead?.lat,
@@ -266,52 +263,13 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           }
         }
       } catch (_err: any) {
-        // Fallback to verified local dataset with smart matching & Metro corridor expansion
+        // Fallback to verified local dataset
         const cleanDist = targetDistrict.replace(/\(.*?\)/g, '').trim().toLowerCase();
-        let matched = REAL_DUBAI_BUSINESSES.filter((b) => {
-          if (targetDistrict !== 'All Dubai') {
-            const bDist = b.district.toLowerCase();
-            const bAddr = b.address.toLowerCase();
-            const isDistMatch = bDist.includes(cleanDist) || bAddr.includes(cleanDist) ||
-              (cleanDist.includes('dcc') && (bDist.includes('dcc') || bDist.includes('deira city centre') || bAddr.includes('port saeed'))) ||
-              (cleanDist.includes('rigga') && bDist.includes('rigga'));
-            if (!isDistMatch) return false;
-          }
-          if (targetCategory !== 'All Categories') {
-            const bCat = b.category.toLowerCase();
-            const bName = b.name.toLowerCase();
-            const tCat = targetCategory.toLowerCase();
-            const isCatMatch = bCat === tCat || bCat.includes(tCat) || tCat.includes(bCat) ||
-              (tCat.includes('restaurant') && (bCat.includes('restaurant') || bCat.includes('cafe') || bName.includes('restaurant') || bName.includes('bakery') || bName.includes('grill') || bName.includes('coffee') || bName.includes('bistro'))) ||
-              (tCat.includes('barber') && (bCat.includes('barber') || bCat.includes('gents') || bCat.includes('men'))) ||
-              (tCat.includes('dental') && (bCat.includes('dental') || bName.includes('dental'))) ||
-              (tCat.includes('clinic') && (bCat.includes('clinic') || bCat.includes('health')));
-            if (!isCatMatch) return false;
-          }
+        const localFiltered = REAL_DUBAI_BUSINESSES.filter((b) => {
+          if (targetDistrict !== 'All Dubai' && !b.district.toLowerCase().includes(cleanDist)) return false;
+          if (targetCategory !== 'All Categories' && b.category !== targetCategory) return false;
           return true;
-        });
-
-        // If station results are under 25, expand to full Metro corridor in the target category
-        if (matched.length < 25) {
-          const existingIds = new Set(matched.map((b) => b.id));
-          const extras = REAL_DUBAI_BUSINESSES.filter((b) => {
-            if (existingIds.has(b.id)) return false;
-            if (targetCategory !== 'All Categories') {
-              const bCat = b.category.toLowerCase();
-              const bName = b.name.toLowerCase();
-              const tCat = targetCategory.toLowerCase();
-              return bCat === tCat || bCat.includes(tCat) || tCat.includes(bCat) ||
-                (tCat.includes('restaurant') && (bCat.includes('restaurant') || bCat.includes('cafe') || bName.includes('restaurant') || bName.includes('bakery') || bName.includes('grill') || bName.includes('coffee') || bName.includes('bistro'))) ||
-                (tCat.includes('barber') && (bCat.includes('barber') || bCat.includes('gents') || bCat.includes('men'))) ||
-                (tCat.includes('dental') && (bCat.includes('dental') || bName.includes('dental'))) ||
-                (tCat.includes('clinic') && (bCat.includes('clinic') || bCat.includes('health')));
-            }
-            return true;
-          });
-          matched = [...matched, ...extras];
-        }
-
-        const localFiltered = matched.map((b) => ({
+        }).map((b) => ({
           ...b,
           audit: generateGmbAudit(b as any),
           buildingInfo: generateGisBuildingData(b as any),

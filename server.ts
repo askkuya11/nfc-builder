@@ -225,7 +225,6 @@ function getExhaustiveAlRiggaBarbershops(): RealDubaiBusiness[] {
       const mobileNum = `+971 50 ${200 + ((charSum * 73) % 700)} ${1000 + ((charSum * 43) % 8999)}`;
       const contactName = ["Mr. Tariq Al-Mansoori", "Mr. Hamdan Al-Baloushi", "Mr. Youssef El-Haddad", "Mr. Nabil Said", "Mr. Samir Khan", "Mr. Ziad Mahmoud"][i % 6];
 
-      const itemPid = generateDeterministicPlaceIdServer(name, "Al Rigga (Red Line)");
       items.push({
         id: `rigga-barber-v146-${items.length + 1}`,
         name,
@@ -235,9 +234,8 @@ function getExhaustiveAlRiggaBarbershops(): RealDubaiBusiness[] {
         district: "Al Rigga (Red Line)",
         address: `${loc.split("-")[1]?.trim() || "Al Rigga Road"}, Deira, Dubai, UAE`,
         phone: phoneNum,
-        placeId: itemPid,
         mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} Dubai`)}`,
-        directReviewUrl: `https://search.google.com/local/writereview?placeid=${itemPid}`,
+        directReviewUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} Dubai`)}`,
         instagramHandle: name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20) + ".ae",
         pitchOpportunity: reviewCount <= 40 ? "high" : "medium",
         pitchAngle: `High-footfall gents salon operating ${yearsInBiz} years in Al Rigga (${reviewCount} total reviews, ~${(reviewCount/yearsInBiz).toFixed(1)} rev/yr). Tapping an NFC review card at barber chairs converts 30-min haircut clients into 5-star Google ratings.`,
@@ -355,35 +353,6 @@ function getFilteredRealBusinesses(
       }
       return false;
     });
-  }
-
-  // Corridor Fallback Expansion: If target station matches are under 25, include neighboring Metro Corridor businesses in the category
-  if (categoryMatches.length < 25 && district && district !== "All Dubai") {
-    const existingIds = new Set(categoryMatches.map(b => b.id));
-    const corridorExtras = allBusinesses.filter(b => {
-      if (existingIds.has(b.id)) return false;
-      if (!category || category === "All Categories") return true;
-
-      const cLower = category.toLowerCase().trim();
-      const bCatLower = b.category.toLowerCase().trim();
-      const bNameLower = b.name.toLowerCase().trim();
-
-      if (bCatLower === cLower || bCatLower.includes(cLower) || cLower.includes(bCatLower)) return true;
-      if (cLower.includes("restaurant") || cLower.includes("cafe")) {
-        return bCatLower.includes("restaurant") || bCatLower.includes("cafe") || bNameLower.includes("restaurant") || bNameLower.includes("cafe") || bNameLower.includes("bakery") || bNameLower.includes("grill") || bNameLower.includes("coffee") || bNameLower.includes("bistro");
-      }
-      if (cLower.includes("dental")) {
-        return bCatLower.includes("dental") || bNameLower.includes("dental") || bNameLower.includes("dentistry") || bNameLower.includes("teeth");
-      }
-      if (cLower.includes("barber") || cLower.includes("gents") || cLower.includes("men")) {
-        return bCatLower.includes("barber") || bCatLower.includes("gents") || bCatLower.includes("men") || bNameLower.includes("barber") || bNameLower.includes("gents") || bNameLower.includes("grooming");
-      }
-      if (cLower.includes("clinic") || cLower.includes("health")) {
-        return bCatLower.includes("clinic") || bCatLower.includes("health") || bCatLower.includes("medical") || bNameLower.includes("clinic") || bNameLower.includes("hospital") || bNameLower.includes("medical");
-      }
-      return false;
-    });
-    categoryMatches = [...categoryMatches, ...corridorExtras];
   }
 
   const totalInDistrictCategory = categoryMatches.length;
@@ -590,7 +559,7 @@ app.post(["/api/search-businesses", "/search-businesses"], async (req, res) => {
     // Fast non-blocking live extraction with strict 800ms timeout race to prevent mobile stalls
     if (results.length < 10) {
       try {
-        const timeoutPromise = new Promise<RealDubaiBusiness[]>((resolve) => setTimeout(() => resolve([]), 3500));
+        const timeoutPromise = new Promise<RealDubaiBusiness[]>((resolve) => setTimeout(() => resolve([]), 800));
         if (targetCoords) {
           const overpassPlaces = await Promise.race([
             fetchOverpassDubaiPlaces(targetCoords.lat, targetCoords.lng, category, district),
@@ -791,23 +760,10 @@ function hexPairToPlaceId(hex1: string, hex2: string): string {
 function isValidPlaceId(placeId: unknown): placeId is string {
   return (
     typeof placeId === "string" &&
-    placeId.trim().length >= 5 &&
+    placeId.trim().length > 10 &&
     !placeId.includes("undefined") &&
     !placeId.includes("null")
   );
-}
-
-function generateDeterministicPlaceIdServer(businessName: string, district?: string): string {
-  const str = ((businessName || "Dubai Business") + (district || "Dubai")).toLowerCase().trim();
-  let h1 = 0x811c9dc5;
-  let h2 = 0x01000193;
-  for (let i = 0; i < str.length; i++) {
-    h1 = Math.imul(h1 ^ str.charCodeAt(i), 16777619);
-    h2 = Math.imul(h2 ^ str.charCodeAt(i), 33554467);
-  }
-  const hex1 = "0x" + (BigInt(Math.abs(h1)) + 0x3e2f052300000000n).toString(16);
-  const hex2 = "0x" + (BigInt(Math.abs(h2)) + 0x1ab3c4d500000000n).toString(16);
-  return hexPairToPlaceId(hex1, hex2) || "ChIJ8yR5iNNdXz4RwK0X2_O7I60";
 }
 
 // API: Extract & Convert Google Map link or Business Name to Direct Review URL (Product Mate)
@@ -817,26 +773,17 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
     const { url, businessName, placeId: providedPlaceId, district } = req.body;
     let mapsUrl = (url || "").trim();
 
+    // STEP 1 — RESOLVE SHORT URL REDIRECT (e.g. maps.app.goo.gl)
     let resolvedUrl = mapsUrl;
-    let htmlText = "";
-
-    // STEP 1 — RESOLVE SHORT URL REDIRECT & FETCH HTML (CRITICAL FOR VERCEL & SERVERLESS)
-    if (
-      mapsUrl.includes("maps.app.goo.gl") ||
-      mapsUrl.includes("goo.gl/maps") ||
-      mapsUrl.includes("bit.ly") ||
-      mapsUrl.includes("goo.gl") ||
-      mapsUrl.includes("page.link")
-    ) {
+    let htmlContent = "";
+    if (mapsUrl.includes("maps.app.goo.gl") || mapsUrl.includes("goo.gl/maps") || mapsUrl.includes("bit.ly") || mapsUrl.includes("goo.gl")) {
       try {
         const response = await fetch(mapsUrl, {
           method: "GET",
           redirect: "follow",
           headers: {
             "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
-            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
           },
         });
         if (response.url) {
@@ -845,72 +792,78 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
           const loc = response.headers.get("location");
           if (loc) resolvedUrl = loc;
         }
-        htmlText = await response.text();
-
-        // Check for meta refresh or canonical links inside HTML body
-        const metaRedirect =
-          htmlText.match(/<meta[^>]*http-equiv=["']?refresh["']?[^>]*content=["']?[0-9]+;\s*URL=['"]?([^"'>\s]+)['"]?/i) ||
-          htmlText.match(/url=\s*['"]?(https:\/\/[^"'>\s]+)['"]?/i) ||
-          htmlText.match(/<link[^>]*rel=["']?canonical["']?[^>]*href=["']?([^"'>\s]+)["']?/i);
-        if (metaRedirect && metaRedirect[1]) {
-          resolvedUrl = metaRedirect[1];
-        }
+        htmlContent = await response.text();
       } catch {
         // Keep mapsUrl if redirect fetch fails
       }
     }
 
-    // Combine all sources for pattern extraction
-    const combinedSearchSpace = [providedPlaceId, mapsUrl, resolvedUrl, htmlText].filter(Boolean).join(" ");
-
-    // STEP 2 — EXTRACT BUSINESS NAME
+    // STEP 2 — EXTRACT BUSINESS NAME & LOCATION
     let extractedName = (businessName || "").trim();
-    if (!extractedName && htmlText) {
-      const titleMatch =
-        htmlText.match(/<title>([^<]+)- Google Maps<\/title>/i) ||
-        htmlText.match(/<title>([^<]+)<\/title>/i);
-      if (titleMatch && titleMatch[1]) {
-        const cleanTitle = titleMatch[1].split("-")[0].split("|")[0].trim();
-        if (cleanTitle && !cleanTitle.toLowerCase().includes("google maps") && cleanTitle.length > 2) {
-          extractedName = cleanTitle;
-        }
-      }
-    }
-    if (!extractedName && resolvedUrl) {
-      const placeMatch = resolvedUrl.match(/\/maps\/place\/([^/@?]+)/);
-      if (placeMatch) {
-        extractedName = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
-      } else {
-        const qMatch = resolvedUrl.match(/[?&]q=([^&]+)/);
-        if (qMatch) {
-          extractedName = decodeURIComponent(qMatch[1].replace(/\+/g, " "));
+    if (resolvedUrl) {
+      if (!extractedName) {
+        const placeMatch = resolvedUrl.match(/\/maps\/place\/([^/@?]+)/);
+        if (placeMatch) {
+          extractedName = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
+        } else {
+          const qMatch = resolvedUrl.match(/[?&]q=([^&]+)/);
+          if (qMatch) {
+            extractedName = decodeURIComponent(qMatch[1].replace(/\+/g, " "));
+          }
         }
       }
     }
 
-    // STEP 3 — IDENTIFY REAL GOOGLE PLACE ID
+    // STEP 3 — IDENTIFY REAL GOOGLE PLACE ID OR HEX FEATURE PAIR
     let finalPlaceId = "";
 
-    // 1. Direct ChIJ Place ID match
-    const chijMatch = combinedSearchSpace.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
-    if (chijMatch && isValidPlaceId(chijMatch[1])) {
-      finalPlaceId = chijMatch[1];
+    // 1. Check if provided placeId is already a valid full Place ID
+    if (isValidPlaceId(providedPlaceId)) {
+      finalPlaceId = providedPlaceId;
     }
 
-    // 2. Query param place_id or placeid
-    if (!finalPlaceId) {
-      const pMatch =
-        combinedSearchSpace.match(/[?&]place_id=([a-zA-Z0-9_-]+)/) ||
-        combinedSearchSpace.match(/[?&]placeid=([a-zA-Z0-9_-]+)/);
+    // 2. Check if Place ID exists in resolved URL
+    if (!finalPlaceId && resolvedUrl) {
+      const pMatch = resolvedUrl.match(/[?&]place_id=([a-zA-Z0-9_-]+)/) || resolvedUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
       if (pMatch && isValidPlaceId(pMatch[1])) {
         finalPlaceId = pMatch[1];
       }
     }
 
-    // 3. Hex feature pair (0x...:0x...) conversion
-    if (!finalPlaceId) {
-      const hexMatch = combinedSearchSpace.match(/(0x[0-9a-fA-F]{12,16}):(0x[0-9a-fA-F]{12,16})/);
-      if (hexMatch && hexMatch[1] && hexMatch[2]) {
+    // 3. Scan HTML body for embedded ChIJ Place ID
+    if (!finalPlaceId && htmlContent) {
+      const htmlPidMatch = htmlContent.match(/(ChIJ[a-zA-Z0-9_-]{23,30})/);
+      if (htmlPidMatch && isValidPlaceId(htmlPidMatch[1])) {
+        finalPlaceId = htmlPidMatch[1];
+      }
+    }
+
+    // 4. Fetch the long resolved URL if we still don't have a Place ID and scan its HTML
+    if (!finalPlaceId && resolvedUrl) {
+      try {
+        const response = await fetch(resolvedUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+          },
+        });
+        const extraHtml = await response.text();
+        const extraPidMatch = extraHtml.match(/(ChIJ[a-zA-Z0-9_-]{23,30})/);
+        if (extraPidMatch && isValidPlaceId(extraPidMatch[1])) {
+          finalPlaceId = extraPidMatch[1];
+        }
+      } catch {
+        // Safe skip
+      }
+    }
+
+    // 5. Extract Google Maps 64-bit Hex Feature ID pair (!1s0x...:0x... or 0x...:0x...) and convert to exact Place ID
+    if (!finalPlaceId && resolvedUrl) {
+      const hexMatch = resolvedUrl.match(/!1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) ||
+                       resolvedUrl.match(/1s(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/) ||
+                       resolvedUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+      if (hexMatch) {
         const calculatedPid = hexPairToPlaceId(hexMatch[1], hexMatch[2]);
         if (isValidPlaceId(calculatedPid)) {
           finalPlaceId = calculatedPid;
@@ -918,69 +871,37 @@ app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps
       }
     }
 
-    // Safety guard: If businessName is specified (e.g. "Diva Gents Salon") and the resolved place ID is for Al Safadi, reject the mismatch
-    const isTargetSafadi = (businessName || extractedName || "").toLowerCase().includes("safadi");
-    if (finalPlaceId === "ChIJk_FT689cXz4RgmjEHf8HKms2" && !isTargetSafadi) {
-      finalPlaceId = "";
-    }
-
-    // 4. Lookup in REAL_DUBAI_BUSINESSES dataset by business name or district
-    if (!finalPlaceId) {
-      const nameToSearch = (businessName || extractedName || "").toLowerCase().trim();
-      if (nameToSearch.length > 2) {
-        const dataset = getCompleteDubaiDataset();
-        const matchedBiz = dataset.find((b) => {
-          const bName = b.name.toLowerCase();
-          return bName.includes(nameToSearch) || nameToSearch.includes(bName);
-        });
-        if (matchedBiz && matchedBiz.placeId && isValidPlaceId(matchedBiz.placeId)) {
-          finalPlaceId = matchedBiz.placeId;
-        }
-      }
-    }
-
-    // 5. Deterministic fallback unique to this specific business
-    if (!finalPlaceId) {
-      finalPlaceId = generateDeterministicPlaceIdServer(businessName || extractedName || "Dubai Business", district || "Dubai");
-    }
-
     // STEP 4 — CONSTRUCT DIRECT REVIEW URL
     let reviewUrl = "";
-    if (finalPlaceId && isValidPlaceId(finalPlaceId) && finalPlaceId.startsWith("ChIJ")) {
+    if (isValidPlaceId(finalPlaceId)) {
       reviewUrl = `https://search.google.com/local/writereview?placeid=${finalPlaceId}`;
     } else {
-      const q = encodeURIComponent(`${businessName || extractedName || "Dubai Business"} ${district || "Dubai"} Dubai`);
-      reviewUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+      const targetName = extractedName || businessName || "Dubai Business";
+      const targetDist = district || "Dubai";
+      reviewUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${targetName} ${targetDist} Dubai`)}`;
     }
 
     console.log(
       `[Map Scout → Product Mate Flow]\n` +
-      `• Input Name: "${businessName || extractedName || 'N/A'}"\n` +
-      `• Resolved URL: "${resolvedUrl || mapsUrl || 'N/A'}"\n` +
-      `• Final Place ID: "${finalPlaceId}"\n` +
-      `• Review URL: "${reviewUrl}"`
+      `• Map Scout input: "${extractedName || businessName || 'N/A'}"\n` +
+      `• Extracted Google Maps URL: "${resolvedUrl || mapsUrl || 'N/A'}"\n` +
+      `• Detected Place ID (if available): "${finalPlaceId || 'None'}"\n` +
+      `• Product Mate input: { businessName: "${extractedName || businessName}", googleMapsUrl: "${resolvedUrl || mapsUrl}", placeId: "${finalPlaceId || ''}" }\n` +
+      `• Final review URL: "${reviewUrl || 'None (Verified Place ID not available)'}"`
     );
 
     return res.json({
       success: true,
-      businessName: businessName || extractedName || "Dubai Business",
+      businessName: extractedName || businessName || "Dubai Business",
       address: district ? `${district}, Dubai, UAE` : "Dubai, UAE",
-      placeId: finalPlaceId,
+      placeId: finalPlaceId || "",
       googleMapsUrl: resolvedUrl || mapsUrl,
       reviewUrl: reviewUrl,
       directReviewUrl: reviewUrl,
       hasVerifiedPlaceId: !!finalPlaceId,
     });
-  } catch (_err) {
-    const fallbackPid = generateDeterministicPlaceIdServer(req.body?.businessName || "Dubai Business", req.body?.district || "Dubai");
-    const reviewUrl = `https://search.google.com/local/writereview?placeid=${fallbackPid}`;
-    return res.json({
-      success: true,
-      businessName: req.body?.businessName || "Dubai Business",
-      placeId: fallbackPid,
-      reviewUrl,
-      directReviewUrl: reviewUrl,
-    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Failed to extract review link" });
   }
 });
 

@@ -14,14 +14,15 @@ import {
   CheckCircle2,
   Mail,
   Globe,
+  Clipboard,
 } from 'lucide-react';
 import { BusinessLead } from '../types';
 import { deriveBusinessWebsite } from '../utils/businessWebsiteUtils';
 import {
   isValidPlaceId,
   isOfficialChIJPlaceId,
+  buildDirectReviewUrl,
   buildGoogleReviewUrl,
-  generateDeterministicPlaceId,
   hexPairToPlaceIdBrowser,
 } from '../utils/googlePlaceIdUtils';
 
@@ -44,31 +45,101 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   // Mode: Google Review Link or Instagram NFC Link
   const [mode, setMode] = useState<'google' | 'instagram'>('google');
 
-  const defaultName = initialLead?.name || 'Diva Gents Salon - Al Rigga Metro Exit 1';
-  const defaultDistrict = initialLead?.district || 'Al Rigga (Red Line)';
-  const defaultPid = initialLead?.placeId || generateDeterministicPlaceId(defaultName, defaultDistrict);
-  const defaultMapsUrl =
-    initialLead?.mapsUrl ||
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${defaultName} ${defaultDistrict} Dubai`)}`;
-
-  // Input states
-  const [businessName, setBusinessName] = useState<string>(defaultName);
-  const [district, setDistrict] = useState<string>(defaultDistrict);
-  const [mapLinkInput, setMapLinkInput] = useState<string>(defaultMapsUrl);
+  // Input states with robust defaults
+  const [businessName, setBusinessName] = useState<string>(
+    initialLead?.name || 'Dubai Gourmet Bistro'
+  );
+  const [district, setDistrict] = useState<string>(
+    initialLead?.district || 'Downtown Dubai'
+  );
+  const [mapLinkInput, setMapLinkInput] = useState<string>(
+    initialLead?.mapsUrl || 'https://www.google.com/maps/search/?api=1&query=Dubai+Gourmet+Bistro+Downtown+Dubai'
+  );
+  const [googleInputTab, setGoogleInputTab] = useState<'search' | 'share'>('search');
+  const [mapShareLinkInput, setMapShareLinkInput] = useState<string>(
+    initialLead?.mapsUrl || ''
+  );
   const [instagramHandle, setInstagramHandle] = useState<string>(
-    initialLead?.instagramHandle || 'divagentssalon'
+    initialLead?.instagramHandle || 'dubaigourmetbistro'
   );
   const [businessWebsite, setBusinessWebsite] = useState<string>(
-    initialLead?.websiteUrl || deriveBusinessWebsite(defaultName)
+    initialLead?.websiteUrl || deriveBusinessWebsite(initialLead?.name || 'Dubai Gourmet Bistro')
   );
 
+  // Input Change Handlers that clear generated state immediately when the business details change
+  const handleBusinessNameChange = (val: string) => {
+    setBusinessName(val);
+    setPlaceId(null);
+    setGeneratedReviewUrl(buildGoogleReviewUrl(val, district, null));
+  };
+
+  const handleDistrictChange = (val: string) => {
+    setDistrict(val);
+    setPlaceId(null);
+    setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, val, null));
+  };
+
+  const handleMapLinkInputChange = (val: string) => {
+    setMapLinkInput(val);
+    setPlaceId(null);
+    setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+  };
+
+  const handleMapShareLinkInputChange = (val: string) => {
+    setMapShareLinkInput(val);
+    setPlaceId(null);
+    setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+  };
+
+  const handleInstagramHandleChange = (val: string) => {
+    setInstagramHandle(val);
+    setPlaceId(null);
+    const clean = val.replace(/^@/, '').trim();
+    setGeneratedInstagramUrl(`https://www.instagram.com/${clean || 'dubaigourmetbistro'}/`);
+  };
+
+  const handleBusinessWebsiteChange = (val: string) => {
+    setBusinessWebsite(val);
+    setPlaceId(null);
+    setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+  };
+
+  const captureClipboardLink = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const clean = text.trim();
+      if (clean) {
+        setMapShareLinkInput(clean);
+        setGoogleInputTab('share');
+        setPlaceId(null);
+        setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+        setSuccessBanner("Successfully captured Google Maps link from clipboard!");
+        
+        // Auto-run resolution
+        setTimeout(() => {
+          processGoogleMapLink(clean);
+        }, 50);
+      } else {
+        setFetchError("Clipboard is empty. Please copy a link first!");
+      }
+    } catch (err) {
+      setFetchError("Please allow clipboard permissions or paste the link manually.");
+    }
+  };
+
   // Generated outputs
-  const [placeId, setPlaceId] = useState<string>(defaultPid);
-  const [generatedReviewUrl, setGeneratedReviewUrl] = useState<string>(
-    initialLead?.directReviewUrl || `https://search.google.com/local/writereview?placeid=${defaultPid}`
+  const [placeId, setPlaceId] = useState<string | null>(
+    initialLead?.placeId && isValidPlaceId(initialLead.placeId)
+      ? initialLead.placeId
+      : null
+  );
+  const [generatedReviewUrl, setGeneratedReviewUrl] = useState<string | null>(
+    initialLead?.placeId && isValidPlaceId(initialLead.placeId)
+      ? `https://search.google.com/local/writereview?placeid=${initialLead.placeId}`
+      : initialLead?.directReviewUrl || buildGoogleReviewUrl(initialLead?.name || 'Dubai Gourmet Bistro', initialLead?.district || 'Downtown Dubai', null)
   );
   const [generatedInstagramUrl, setGeneratedInstagramUrl] = useState<string>(
-    `https://www.instagram.com/${initialLead?.instagramHandle || 'divagentssalon'}/`
+    `https://www.instagram.com/${initialLead?.instagramHandle || 'dubaigourmetbistro'}/`
   );
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [fetchError, setFetchError] = useState<string>('');
@@ -80,27 +151,31 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   // Synchronize when a lead is passed from App 1 (Map Scout)
   useEffect(() => {
     if (initialLead) {
-      const leadName = initialLead.name || 'Dubai Business';
-      const leadDistrict = initialLead.district || 'Dubai';
-      const leadPid =
-        initialLead.placeId && isOfficialChIJPlaceId(initialLead.placeId)
-          ? initialLead.placeId
-          : generateDeterministicPlaceId(leadName, leadDistrict);
-      const leadMapsUrl =
-        initialLead.mapsUrl && !initialLead.mapsUrl.includes('yMHn9hGf2T3t9XRN6')
-          ? initialLead.mapsUrl
-          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${leadName} ${leadDistrict} Dubai`)}`;
+      setMapLinkInput(initialLead.mapsUrl || '');
+      setMapShareLinkInput(initialLead.shareUrl || '');
+      setBusinessName(initialLead.name || 'Dubai Business');
+      setDistrict(initialLead.district || 'Dubai');
+      setInstagramHandle(initialLead.instagramHandle || 'dubaibusiness');
+      setBusinessWebsite(initialLead.websiteUrl || deriveBusinessWebsite(initialLead.name));
+      setSuccessBanner(`Loaded ${initialLead.name} from Map Scout`);
 
-      setMapLinkInput(leadMapsUrl);
-      setBusinessName(leadName);
-      setDistrict(leadDistrict);
-      setPlaceId(leadPid);
-      setInstagramHandle(initialLead.instagramHandle || leadName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) + '.ae');
-      setBusinessWebsite(initialLead.websiteUrl || deriveBusinessWebsite(leadName));
-      setSuccessBanner(`Loaded ${leadName} from Map Scout`);
-
-      const reviewLink = `https://search.google.com/local/writereview?placeid=${leadPid}`;
-      setGeneratedReviewUrl(reviewLink);
+      if (initialLead.placeId && isValidPlaceId(initialLead.placeId)) {
+        setPlaceId(initialLead.placeId);
+        setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${initialLead.placeId}`);
+      } else if (initialLead.directReviewUrl) {
+        // Extract placeId from directReviewUrl if possible
+        const match = initialLead.directReviewUrl.match(/placeid=([a-zA-Z0-9_-]+)/) || initialLead.directReviewUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
+        if (match && match[1] && isValidPlaceId(match[1])) {
+          setPlaceId(match[1]);
+          setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${match[1]}`);
+        } else {
+          setPlaceId(null);
+          setGeneratedReviewUrl(buildGoogleReviewUrl(initialLead.name || 'Dubai Business', initialLead.district || 'Dubai', null));
+        }
+      } else {
+        setPlaceId(null);
+        setGeneratedReviewUrl(buildGoogleReviewUrl(initialLead.name || 'Dubai Business', initialLead.district || 'Dubai', null));
+      }
     }
   }, [initialLead]);
 
@@ -111,13 +186,6 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       setGeneratedInstagramUrl(`https://www.instagram.com/${clean}/`);
     }
   }, [instagramHandle]);
-
-  // Fallback link builder if generatedReviewUrl is missing or has old stub placeId
-  useEffect(() => {
-    if (!generatedReviewUrl || generatedReviewUrl.includes('ChIJ8_DXB_AlSafadiRigga')) {
-      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, placeId));
-    }
-  }, [businessName, district, placeId, generatedReviewUrl]);
 
   // Generate QR Code whenever the active URL changes
   useEffect(() => {
@@ -149,44 +217,35 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     setIsAnalyzing(true);
     setFetchError('');
 
+    // RESET STATE IMMEDIATELY BEFORE RESOLVING TO AVOID STALE STATE
+    setPlaceId(null);
+    setGeneratedReviewUrl(null);
+
     try {
       const rawUrl = url.trim();
-      const isSafadiBusiness = (businessName || '').toLowerCase().includes('safadi');
+      let resolvedPlaceId: string | null = null;
 
       // 1. Check for placeid= query parameter
       const placeIdMatch = rawUrl.match(/placeid=([a-zA-Z0-9_-]+)/);
-      if (placeIdMatch && placeIdMatch[1] && isOfficialChIJPlaceId(placeIdMatch[1])) {
-        const pid = placeIdMatch[1];
-        if (pid !== 'ChIJk_FT689cXz4RgmjEHf8HKms2' || isSafadiBusiness) {
-          setPlaceId(pid);
-          setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
-          setIsAnalyzing(false);
-          return;
-        }
+      if (placeIdMatch && placeIdMatch[1] && isValidPlaceId(placeIdMatch[1])) {
+        resolvedPlaceId = placeIdMatch[1];
       }
 
       // 2. Check for explicit ChIJ Place ID anywhere in URL
-      const chijMatch = rawUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
-      if (chijMatch && chijMatch[1] && isOfficialChIJPlaceId(chijMatch[1])) {
-        const pid = chijMatch[1];
-        if (pid !== 'ChIJk_FT689cXz4RgmjEHf8HKms2' || isSafadiBusiness) {
-          setPlaceId(pid);
-          setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
-          setIsAnalyzing(false);
-          return;
+      if (!resolvedPlaceId) {
+        const chijMatch = rawUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
+        if (chijMatch && chijMatch[1] && isValidPlaceId(chijMatch[1])) {
+          resolvedPlaceId = chijMatch[1];
         }
       }
 
       // 3. Check for 64-bit Hex Feature ID pair (0x...:0x...) anywhere in URL
-      const hexMatch = rawUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
-      if (hexMatch && hexMatch[1] && hexMatch[2]) {
-        const derived = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
-        if (derived && isOfficialChIJPlaceId(derived)) {
-          if (derived !== 'ChIJk_FT689cXz4RgmjEHf8HKms2' || isSafadiBusiness) {
-            setPlaceId(derived);
-            setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${derived}`);
-            setIsAnalyzing(false);
-            return;
+      if (!resolvedPlaceId) {
+        const hexMatch = rawUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+        if (hexMatch && hexMatch[1] && hexMatch[2]) {
+          const derived = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
+          if (derived && isValidPlaceId(derived)) {
+            resolvedPlaceId = derived;
           }
         }
       }
@@ -201,33 +260,68 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       }
 
       // 5. Query server backend endpoint (works locally, in Cloud Run, and on Vercel)
-      const response = await fetch('/api/extract-review-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: rawUrl, businessName, district }),
-      });
+      if (!resolvedPlaceId) {
+        const response = await fetch('/api/extract-review-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: rawUrl, businessName, district }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.reviewUrl) {
-          if (data.placeId && isOfficialChIJPlaceId(data.placeId)) setPlaceId(data.placeId);
-          setGeneratedReviewUrl(data.reviewUrl);
-          if (data.businessName && !businessName) {
-            setBusinessName(data.businessName);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.placeId && isValidPlaceId(data.placeId)) {
+            resolvedPlaceId = data.placeId;
+          } else if (data.reviewUrl) {
+            const backendPlaceIdMatch = data.reviewUrl.match(/placeid=([a-zA-Z0-9_-]+)/) || data.reviewUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
+            if (backendPlaceIdMatch && backendPlaceIdMatch[1] && isValidPlaceId(backendPlaceIdMatch[1])) {
+              resolvedPlaceId = backendPlaceIdMatch[1];
+            }
           }
-          setIsAnalyzing(false);
-          return;
         }
       }
 
-      // 6. Resilient Fallback using deterministic ID
-      const fallbackPid = generateDeterministicPlaceId(businessName || 'Dubai Business', district || 'Dubai');
-      setPlaceId(fallbackPid);
-      setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${fallbackPid}`);
+      // Verify that the Place ID belongs to the CURRENT business
+      // If it contains "AlSafadi" or is Al Safadi's ID, check if current businessName contains "safadi"
+      if (resolvedPlaceId) {
+        const isAlSafadiId = resolvedPlaceId.includes('AlSafadi') || resolvedPlaceId === 'ChIJ8_DXB_AlSafadiRigga';
+        const nameContainsSafadi = businessName.toLowerCase().includes('safadi');
+        if (isAlSafadiId && !nameContainsSafadi) {
+          // It does not belong to the current business! Mismatched!
+          resolvedPlaceId = null;
+        }
+      }
+
+      // Update state based on resolved value
+      if (resolvedPlaceId && isValidPlaceId(resolvedPlaceId)) {
+        setPlaceId(resolvedPlaceId);
+        const reviewUrl = buildDirectReviewUrl(resolvedPlaceId);
+        setGeneratedReviewUrl(reviewUrl);
+
+        console.log(
+          `[REVIEW GENERATOR]\n\n` +
+          `Current Business: ${businessName}\n` +
+          `Current Address: ${district}\n` +
+          `Current Google Maps URL: ${rawUrl}\n` +
+          `Resolved Place ID: ${resolvedPlaceId}\n` +
+          `Generated Review URL: ${reviewUrl}\n`
+        );
+      } else {
+        setPlaceId(null);
+        const fallbackUrl = buildGoogleReviewUrl(businessName, district, null);
+        setGeneratedReviewUrl(fallbackUrl);
+
+        console.log(
+          `[REVIEW GENERATOR]\n\n` +
+          `Current Business: ${businessName}\n` +
+          `Current Address: ${district}\n` +
+          `Current Google Maps URL: ${rawUrl}\n` +
+          `Resolved Place ID: null\n` +
+          `Generated Review URL: ${fallbackUrl} (Using Resilient Fallback Search Link)\n`
+        );
+      }
     } catch (_err) {
-      const fallbackPid = generateDeterministicPlaceId(businessName || 'Dubai Business', district || 'Dubai');
-      setPlaceId(fallbackPid);
-      setGeneratedReviewUrl(`https://search.google.com/local/writereview?placeid=${fallbackPid}`);
+      setPlaceId(null);
+      setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
     } finally {
       setIsAnalyzing(false);
     }
@@ -368,7 +462,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 <input
                   type="text"
                   value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
+                  onChange={(e) => handleBusinessNameChange(e.target.value)}
                   placeholder="e.g. Marina Breeze Bakery"
                   className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                 />
@@ -381,7 +475,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 <input
                   type="text"
                   value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
+                  onChange={(e) => handleDistrictChange(e.target.value)}
                   placeholder="e.g. Dubai Marina"
                   className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                 />
@@ -400,39 +494,122 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
               <input
                 type="text"
                 value={businessWebsite}
-                onChange={(e) => setBusinessWebsite(e.target.value)}
+                onChange={(e) => handleBusinessWebsiteChange(e.target.value)}
                 placeholder="www.alsafadirestaurants.com"
                 className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition font-mono min-w-0"
               />
             </div>
 
             {mode === 'google' ? (
-              /* Google Maps Link Box */
-              <div className="min-w-0">
-                <label className="block text-[11px] font-semibold text-[#8e8aab] mb-1.5">
-                  Google Maps Link or Search Link
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={mapLinkInput}
-                    onChange={(e) => setMapLinkInput(e.target.value)}
-                    placeholder="Paste Google Maps URL (e.g. https://maps.app.goo.gl/...)"
-                    className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
-                  />
+              /* Google Maps Link Box with sub-tabs */
+              <div className="min-w-0 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <label className="block text-[11px] font-semibold text-[#8e8aab]">
+                    Google Maps Connection URL
+                  </label>
+                  
+                  {/* Tab Selector */}
+                  <div className="flex items-center gap-1 bg-[#110f22]/80 p-0.5 rounded-lg border border-[#26223d]">
+                    <button
+                      type="button"
+                      onClick={() => setGoogleInputTab('search')}
+                      className={`px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wide uppercase transition-all ${
+                        googleInputTab === 'search'
+                          ? 'bg-[#ec1a65] text-white shadow-sm'
+                          : 'text-[#8e8aab] hover:text-white'
+                      }`}
+                    >
+                      Web / Search Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGoogleInputTab('share')}
+                      className={`px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wide uppercase transition-all ${
+                        googleInputTab === 'share'
+                          ? 'bg-[#ec1a65] text-white shadow-sm'
+                          : 'text-[#8e8aab] hover:text-white'
+                      }`}
+                    >
+                      Google Maps Share Link
+                    </button>
+                  </div>
                 </div>
 
+                {googleInputTab === 'search' ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={mapLinkInput}
+                      onChange={(e) => handleMapLinkInputChange(e.target.value)}
+                      placeholder="Paste Web Search URL (e.g. https://www.google.com/maps/search/...)"
+                      className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative flex gap-2">
+                    <input
+                      type="text"
+                      value={mapShareLinkInput}
+                      onChange={(e) => handleMapShareLinkInputChange(e.target.value)}
+                      placeholder="Paste Share URL (e.g. https://maps.app.goo.gl/...)"
+                      className="flex-1 bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
+                    />
+                    <button
+                      type="button"
+                      onClick={captureClipboardLink}
+                      className="px-3.5 py-2.5 rounded-xl bg-[#ec1a65]/20 hover:bg-[#ec1a65]/30 text-white border border-[#ec1a65]/40 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+                      title="Auto-capture link from your clipboard"
+                    >
+                      <Clipboard className="w-3.5 h-3.5 text-[#ec1a65]" />
+                      <span>Capture</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Guided Share Link Capture Helper */}
+                {mapLinkInput && (
+                  <div className="bg-[#110f22]/60 border border-[#26223d]/40 rounded-xl p-3 text-xs text-[#8e8aab] flex flex-col gap-2 mt-1">
+                    <p className="leading-relaxed">
+                      💡 <strong>Super Fast One-Tap Capture Workflow:</strong>
+                    </p>
+                    <ol className="list-decimal pl-4 space-y-1 text-[11px]">
+                      <li>Click <strong>1. Open on Google Maps</strong> below.</li>
+                      <li>On Google Maps, click <strong>Share</strong> and then click <strong>Copy link</strong>.</li>
+                      <li>Return here and click <strong>2. One-Tap Capture & Generate</strong> to instantly grab and resolve it!</li>
+                    </ol>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => window.open(mapLinkInput, '_blank', 'noopener,noreferrer')}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00b4d8]/20 hover:bg-[#00b4d8]/30 text-white border border-[#00b4d8]/40 text-[11px] font-bold transition-all"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-[#00b4d8]" />
+                        <span>1. Open on Google Maps</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={captureClipboardLink}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ec1a65]/20 hover:bg-[#ec1a65]/30 text-white border border-[#ec1a65]/40 text-[11px] font-bold transition-all animate-pulse hover:animate-none"
+                      >
+                        <Clipboard className="w-3.5 h-3.5 text-[#ec1a65]" />
+                        <span>2. One-Tap Capture & Generate</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {fetchError && (
-                  <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1">
+                  <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>{fetchError}</span>
                   </p>
                 )}
 
-                <div className="mt-2.5 flex items-center gap-2">
+                <div className="mt-1 flex items-center gap-2">
                   <button
-                    onClick={() => processGoogleMapLink(mapLinkInput)}
-                    disabled={isAnalyzing || !mapLinkInput}
+                    onClick={() => processGoogleMapLink(googleInputTab === 'search' ? mapLinkInput : mapShareLinkInput)}
+                    disabled={isAnalyzing || !(googleInputTab === 'search' ? mapLinkInput : mapShareLinkInput)}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-semibold transition border border-[#26223d] disabled:opacity-40"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
@@ -451,7 +628,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   <input
                     type="text"
                     value={instagramHandle.replace(/^@/, '')}
-                    onChange={(e) => setInstagramHandle(e.target.value)}
+                    onChange={(e) => handleInstagramHandleChange(e.target.value)}
                     placeholder="marinabreeze.ae"
                     className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white placeholder-[#6d698a] focus:outline-none transition min-w-0"
                   />
@@ -487,15 +664,31 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
 
               {mode === 'google' ? (
                 generatedReviewUrl ? (
-                  <p className="text-xs font-mono text-[#00b4d8] break-all select-all leading-relaxed">
-                    {generatedReviewUrl}
-                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-xs font-mono text-[#00b4d8] break-all select-all leading-relaxed">
+                      {generatedReviewUrl}
+                    </p>
+                    {!isValidPlaceId(placeId) && (
+                      <p className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1 mt-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" />
+                        <span>Google Place ID not verified. Created a highly resilient, working Maps Search fallback URL.</span>
+                      </p>
+                    )}
+                  </div>
                 ) : (
-                  <div className="flex flex-col gap-1 py-1">
+                  <div className="flex flex-col gap-2 py-1">
                     <div className="flex items-center gap-1.5 text-amber-400 font-semibold text-xs">
                       <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Verified Google Place ID not available.</span>
+                      <span>Verified Google Place ID not available for this business.</span>
                     </div>
+                    {mapLinkInput && (
+                      <div className="mt-1">
+                        <span className="block text-[10px] text-[#8e8aab] mb-1 font-semibold uppercase">Google Maps Link:</span>
+                        <p className="text-xs font-mono text-[#00b4d8] break-all leading-relaxed bg-[#110f22] p-2 rounded-lg border border-[#26223d]/40 select-all">
+                          {mapLinkInput}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               ) : (

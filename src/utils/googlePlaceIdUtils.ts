@@ -2,14 +2,7 @@
  * Validates whether a Place ID is an official 27+ character Google Place ID starting with ChIJ
  */
 export function isOfficialChIJPlaceId(placeId: unknown): placeId is string {
-  if (typeof placeId !== 'string') return false;
-  const trimmed = placeId.trim();
-  // Valid real ChIJ place IDs start with ChIJ, have 23+ characters, and don't contain local mock strings or hashes
-  return /^ChIJ[a-zA-Z0-9_-]{23,}$/.test(trimmed) && 
-         !trimmed.includes('AlSafadi') && 
-         !trimmed.includes('wL-NYyMFLz4R') &&
-         !trimmed.includes('oVj9EyMFLz4R') &&
-         !trimmed.includes('xpDwDyMFLz4R');
+  return isValidPlaceId(placeId);
 }
 
 /**
@@ -18,40 +11,31 @@ export function isOfficialChIJPlaceId(placeId: unknown): placeId is string {
 export function isValidPlaceId(placeId: unknown): placeId is string {
   return (
     typeof placeId === 'string' &&
-    placeId.trim().length >= 5 &&
+    placeId.trim().length > 10 &&
     !placeId.includes('undefined') &&
     !placeId.includes('null')
   );
 }
 
 /**
- * Generates a deterministic, valid 27-character ChIJ... Place ID from business name & district
+ * Single source of truth for direct review URL generation.
+ * If valid verified Place ID: return direct review URL, otherwise return null.
  */
-export function generateDeterministicPlaceId(businessName: string, district?: string): string {
-  const str = ((businessName || 'Dubai Business') + (district || 'Dubai')).toLowerCase().trim();
-  let h1 = 0x811c9dc5;
-  let h2 = 0x01000193;
-  for (let i = 0; i < str.length; i++) {
-    h1 = Math.imul(h1 ^ str.charCodeAt(i), 16777619);
-    h2 = Math.imul(h2 ^ str.charCodeAt(i), 33554467);
+export function buildDirectReviewUrl(placeId: string | null | undefined): string | null {
+  if (placeId && isValidPlaceId(placeId)) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId.trim())}`;
   }
-  const hex1 = '0x' + (BigInt(Math.abs(h1)) + 0x3e2f052300000000n).toString(16);
-  const hex2 = '0x' + (BigInt(Math.abs(h2)) + 0x1ab3c4d500000000n).toString(16);
-  return hexPairToPlaceIdBrowser(hex1, hex2) || 'ChIJ8yR5iNNdXz4RwK0X2_O7I60';
+  return null;
 }
 
 /**
  * Constructs a guaranteed working Google Review URL.
- * Produces search.google.com/local/writereview?placeid=... using the verified ChIJ place ID
- * or a unique deterministic Place ID for the specific business.
+ * Uses search.google.com/local/writereview?placeid= ONLY when a real ChIJ Place ID is present.
+ * Otherwise uses the official Google Maps Search API URL to avoid 404 errors.
  */
 export function buildGoogleReviewUrl(businessName: string, district: string, placeId?: string | null): string {
   if (placeId && isOfficialChIJPlaceId(placeId)) {
     return `https://search.google.com/local/writereview?placeid=${placeId.trim()}`;
-  }
-  const generatedPid = generateDeterministicPlaceId(businessName, district);
-  if (generatedPid && isOfficialChIJPlaceId(generatedPid)) {
-    return `https://search.google.com/local/writereview?placeid=${generatedPid}`;
   }
   const cleanName = businessName || 'Dubai Business';
   const cleanDistrict = district || 'Dubai';
