@@ -419,11 +419,11 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* DOWNLOAD & OPEN NFC TOOLS APP BUTTONS */}
-            <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-2.5 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold text-white flex items-center gap-1 px-1">
+            {/* COMPACT NFC TOOLS MOBILE APP DOWNLOAD LINKS */}
+            <div className="bg-[#110f22] border border-[#27233e] rounded-2xl px-3 py-2 flex items-center gap-2">
+              <span className="text-[11px] font-bold text-white flex items-center gap-1">
                 <Smartphone className="w-3.5 h-3.5 text-[#ec1a65]" />
-                <span className="hidden sm:inline">NFC Tools App:</span>
+                <span className="hidden sm:inline">NFC Tools:</span>
               </span>
 
               <a
@@ -431,10 +431,10 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 href="https://play.google.com/store/apps/details?id=com.wakdev.wdnfc"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white text-[11px] font-semibold border border-[#383256] transition"
-                title="Download NFC Tools for Android on Google Play"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#1a172e] hover:bg-[#252042] text-white text-[11px] font-semibold border border-[#383256] transition"
+                title="Download NFC Tools for Android"
               >
-                <span>🤖 Android (Play Store)</span>
+                <span>Android</span>
                 <ExternalLink className="w-3 h-3 text-[#10b981]" />
               </a>
 
@@ -443,10 +443,10 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 href="https://apps.apple.com/app/nfc-tools/id1252962749"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white text-[11px] font-semibold border border-[#383256] transition"
-                title="Download NFC Tools for iPhone on Apple App Store"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#1a172e] hover:bg-[#252042] text-white text-[11px] font-semibold border border-[#383256] transition"
+                title="Download NFC Tools for iOS"
               >
-                <span>🍎 iOS (App Store)</span>
+                <span>iOS</span>
                 <ExternalLink className="w-3 h-3 text-[#00b4d8]" />
               </a>
 
@@ -455,10 +455,10 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 href="https://www.wakdev.com/apps/nfc-tools.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-[#ec1a65]/20 to-[#a822d8]/20 hover:from-[#ec1a65]/30 hover:to-[#a822d8]/30 text-[#ff5c8a] hover:text-white text-[11px] font-bold border border-[#ec1a65]/40 transition"
-                title="Open Official NFC Tools App Website"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#381423] hover:bg-[#4a1a2e] text-[#ff5c8a] hover:text-white text-[11px] font-bold border border-[#ec1a65]/40 transition"
+                title="Open NFC Tools Website"
               >
-                <span>Open NFC Tools</span>
+                <span>Web</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>

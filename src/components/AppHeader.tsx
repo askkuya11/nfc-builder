@@ -51,22 +51,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <span className="text-[19px] font-bold text-white tracking-tight">
                 ReviewRadar
               </span>
-              <span className="bg-[#381423] text-[#ff5c8a] border border-[#ff2a6d]/40 text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full">
-                Dubai Metro
-              </span>
             </div>
           </div>
         </div>
 
-        {/* Right Badge: 100% Free & Clock */}
+        {/* Right: Clock */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="bg-[#102a20] text-[#34d399] border border-[#059669]/40 text-[11px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
-            <span>100% Free</span>
-          </div>
-
           {dubaiTime && (
-            <span className="hidden sm:inline-block text-[11px] text-[#6f6b8c] font-mono">
+            <span className="text-[11px] text-[#6f6b8c] font-mono">
               {dubaiTime} GST
             </span>
           )}
