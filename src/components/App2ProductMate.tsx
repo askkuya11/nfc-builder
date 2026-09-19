@@ -356,17 +356,17 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   return (
     <div className="flex flex-col gap-5 pb-20 text-white">
       {/* App Header & Banner */}
-      <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#381423] border border-[#ec1a65]/40 text-[#ff5c8a] text-xs font-bold mb-2">
-              <Sparkles className="w-3.5 h-3.5" /> App 2 of 3: Product Mate Free Link Generator
+              <Sparkles className="w-3.5 h-3.5" /> Direct Review Link & Payload Generator
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               Direct 5-Star Review & Instagram Generator
             </h2>
             <p className="text-xs sm:text-sm text-[#8e8aab] mt-1 max-w-xl leading-relaxed">
-              Converts standard Google Map links into official <strong className="text-[#ff5c8a]">Direct 5-Star Review write links</strong>. Bypasses the map search step so customers tap their phone and rate instantly.
+              Converts Google Business Profiles into official <strong className="text-[#ff5c8a]">Direct 5-Star Review write links</strong>. Bypasses map searches so customers tap and rate instantly.
             </p>
           </div>
         </div>
@@ -408,7 +408,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
 
         {/* Mode Toggle: Google Review vs Instagram NFC */}
         <div className="mt-5 pt-4 border-t border-[#26223e]">
-          <div className="p-1.5 bg-[#110f22] border border-[#26223d] rounded-2xl flex items-center gap-1.5">
+          <div className="p-1 bg-[#110f22] border border-[#26223d] rounded-2xl flex items-center gap-1">
             <button
               type="button"
               onClick={() => setMode('google')}

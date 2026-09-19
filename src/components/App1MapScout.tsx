@@ -333,34 +333,34 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         </div>
 
         {/* Currently Active Station Spotlight */}
-        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-3 flex items-center justify-between gap-3 shadow-inner">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3 min-w-0">
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
                 parsedCurrentStation.isInterchange
-                  ? 'bg-gradient-to-br from-[#ff3366] to-[#10b981] text-white shadow-md'
+                  ? 'bg-gradient-to-br from-[#ff3366] to-[#10b981] text-white'
                   : parsedCurrentStation.isGreen
                   ? 'bg-[#10b981]/20 border border-[#10b981]/40 text-[#34d399]'
                   : 'bg-[#ff3366]/20 border border-[#ff3366]/40 text-[#ff708f]'
               }`}
             >
-              <TrainFront className="w-5 h-5" />
+              <TrainFront className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                <h3 className="text-[15px] font-bold text-white tracking-tight shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-white tracking-tight shrink-0">
                   {parsedCurrentStation.displayName}
                 </h3>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0 ${
                     parsedCurrentStation.isInterchange
-                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] text-white shadow-sm'
+                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] text-white'
                       : parsedCurrentStation.isGreen
                       ? 'bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/40'
                       : 'bg-[#ff3366]/20 text-[#ff708f] border border-[#ff3366]/40'
                   }`}
                 >
-                  {parsedCurrentStation.isInterchange ? 'Red & Green Interchange' : parsedCurrentStation.lineLabel}
+                  {parsedCurrentStation.isInterchange ? 'Interchange' : parsedCurrentStation.lineLabel}
                 </span>
               </div>
               <p className="text-[11px] text-[#8e8aab] truncate mt-0.5">
@@ -368,19 +368,19 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
               </p>
             </div>
           </div>
-          <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full bg-[#381423] border border-[#ec1a65]/40 text-[10px] font-bold text-[#ff5c8a] shrink-0">
+          <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full bg-[#1e1933] border border-[#3b3259] text-[10px] font-bold text-[#ff5c8a] shrink-0">
             Active Hub
           </span>
         </div>
 
         {/* Line Filter Capsule Switch */}
-        <div className="flex items-center bg-[#100e1f] p-1 rounded-full border border-[#26223e]">
+        <div className="flex items-center bg-[#110f22] p-1 rounded-full border border-[#26223e]">
           <button
             type="button"
             onClick={() => setStationLineFilter('all')}
             className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold transition-all ${
               stationLineFilter === 'all'
-                ? 'bg-white text-black shadow-sm'
+                ? 'bg-[#ec1a65] text-white shadow-sm'
                 : 'text-[#8e8aab] hover:text-white'
             }`}
           >
@@ -496,19 +496,19 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         </div>
 
         {/* Station Corridor Box (Interactive Metro Track Route & iOS Switch) */}
-        <div className="bg-[#24111e] border border-[#ec1a65]/40 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-lg">
+        <div className="bg-[#110f22] border border-[#26223d] hover:border-[#ec1a65]/30 transition-colors rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-md">
           {/* Top Corridor Control Header */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-[#ec1a65]/20 border border-[#ec1a65]/40 flex items-center justify-center text-[#ff5c8a] shrink-0">
+              <div className="w-6 h-6 rounded-full bg-[#ec1a65]/15 border border-[#ec1a65]/30 flex items-center justify-center text-[#ff5c8a] shrink-0">
                 <TrainFront className="w-3.5 h-3.5" />
               </div>
               <div>
-                <span className="text-xs font-bold text-[#ff5c8a] block leading-tight">
-                  Station Corridor
+                <span className="text-xs font-bold text-white block leading-tight">
+                  Station Corridor Sweep
                 </span>
-                <span className="text-[10px] text-[#ff9bbb] hidden sm:block">
-                  Adjacent transit sweep on active metro line
+                <span className="text-[10px] text-[#8e8aab] hidden sm:block">
+                  Scout adjacent stops along active metro line
                 </span>
               </div>
             </div>
@@ -521,12 +521,12 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
               onClick={() => setScoutAdjacentCorridor(!scoutAdjacentCorridor)}
               className="flex items-center gap-2 cursor-pointer select-none group focus:outline-none"
             >
-              <span className="text-xs font-bold text-white group-hover:text-[#ff9bbb] transition-colors">
-                Scout Adjacent Corridor
+              <span className="text-xs font-medium text-[#a5a0c0] group-hover:text-white transition-colors">
+                Adjacent Sweep
               </span>
               <div
                 className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                  scoutAdjacentCorridor ? 'bg-[#ec1a65]' : 'bg-[#373052]'
+                  scoutAdjacentCorridor ? 'bg-[#ec1a65]' : 'bg-[#2a2542]'
                 }`}
               >
                 <div
