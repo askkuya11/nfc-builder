@@ -34,6 +34,8 @@ import {
   Code,
   Check,
   ChevronDown,
+  Download,
+  Smartphone,
 } from 'lucide-react';
 import { NfcCardPreview } from './NfcCardPreview';
 import { CardTheme, NfcChipType, NfcBatchItem } from '../types';
@@ -416,7 +418,51 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* DOWNLOAD & OPEN NFC TOOLS APP BUTTONS */}
+            <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-2.5 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold text-white flex items-center gap-1 px-1">
+                <Smartphone className="w-3.5 h-3.5 text-[#ec1a65]" />
+                <span className="hidden sm:inline">NFC Tools App:</span>
+              </span>
+
+              <a
+                id="link-nfc-play-store"
+                href="https://play.google.com/store/apps/details?id=com.wakdev.wdnfc"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white text-[11px] font-semibold border border-[#383256] transition"
+                title="Download NFC Tools for Android on Google Play"
+              >
+                <span>🤖 Android (Play Store)</span>
+                <ExternalLink className="w-3 h-3 text-[#10b981]" />
+              </a>
+
+              <a
+                id="link-nfc-app-store"
+                href="https://apps.apple.com/app/nfc-tools/id1252962749"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white text-[11px] font-semibold border border-[#383256] transition"
+                title="Download NFC Tools for iPhone on Apple App Store"
+              >
+                <span>🍎 iOS (App Store)</span>
+                <ExternalLink className="w-3 h-3 text-[#00b4d8]" />
+              </a>
+
+              <a
+                id="link-nfc-wakdev-site"
+                href="https://www.wakdev.com/apps/nfc-tools.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-[#ec1a65]/20 to-[#a822d8]/20 hover:from-[#ec1a65]/30 hover:to-[#a822d8]/30 text-[#ff5c8a] hover:text-white text-[11px] font-bold border border-[#ec1a65]/40 transition"
+                title="Open Official NFC Tools App Website"
+              >
+                <span>Open NFC Tools</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
             <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-3 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10b981] to-[#00b4d8] flex items-center justify-center text-white shadow-lg">
                 <CreditCard className="w-5 h-5" />
@@ -510,7 +556,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
               </div>
 
               {/* Approach Tag Scanning Trigger */}
-              <div className="bg-[#110f22] border-2 border-dashed border-[#27233e] rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 hover:border-[#ec1a65]/50 transition group">
+              <div className="bg-[#110f22] border-2 border-dashed border-[#27233e] rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-4 hover:border-[#ec1a65]/50 transition group">
                 <div className="w-20 h-20 rounded-full bg-[#1a172e] border border-[#322c50] flex items-center justify-center text-[#ec1a65] group-hover:scale-110 transition shadow-xl relative">
                   <span className="absolute inset-0 rounded-full bg-[#ec1a65]/20 animate-ping opacity-40" />
                   <Radio className="w-10 h-10 relative z-10" />
@@ -530,6 +576,42 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 >
                   Approach an NFC Tag
                 </button>
+
+                {/* NFC Tools App Download Helper */}
+                <div className="pt-3 border-t border-[#27233e] w-full max-w-md text-center space-y-2">
+                  <span className="text-[11px] font-semibold text-[#8e8aab] block">
+                    Don't have the NFC Tools app on your phone yet?
+                  </span>
+                  <div className="flex items-center justify-center flex-wrap gap-2 text-xs">
+                    <a
+                      href="https://play.google.com/store/apps/details?id=com.wakdev.wdnfc"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white font-semibold text-[11px] border border-[#383256] transition inline-flex items-center gap-1"
+                    >
+                      <span>🤖 Play Store (Android)</span>
+                      <ExternalLink className="w-3 h-3 text-[#10b981]" />
+                    </a>
+                    <a
+                      href="https://apps.apple.com/app/nfc-tools/id1252962749"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white font-semibold text-[11px] border border-[#383256] transition inline-flex items-center gap-1"
+                    >
+                      <span>🍎 App Store (iOS)</span>
+                      <ExternalLink className="w-3 h-3 text-[#00b4d8]" />
+                    </a>
+                    <a
+                      href="https://www.wakdev.com/apps/nfc-tools.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-[#381423] hover:bg-[#4a1a2e] text-[#ff5c8a] font-bold text-[11px] border border-[#ec1a65]/40 transition inline-flex items-center gap-1"
+                    >
+                      <span>Open NFC Tools Website</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
               </div>
 
               {/* READ RESULT CARD */}
@@ -1309,6 +1391,42 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
 
             <div className="w-full bg-[#110f22] rounded-xl p-3 text-[11px] font-mono text-[#00b4d8] border border-[#27233e]">
               {nfcWriteStatus === 'scanning' ? 'Ready to Scan...' : 'Operation Completed!'}
+            </div>
+
+            {/* App download helper links inside modal */}
+            <div className="w-full bg-[#110f22] border border-[#27233e] rounded-2xl p-3 text-center space-y-2">
+              <span className="text-[10px] font-bold text-[#8e8aab] uppercase tracking-wider block">
+                NFC Tools Mobile App Setup
+              </span>
+              <div className="flex items-center justify-center flex-wrap gap-1.5 text-[11px]">
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.wakdev.wdnfc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-[#1a172e] hover:bg-[#252042] text-white font-semibold border border-[#383256] transition inline-flex items-center gap-1"
+                >
+                  <span>🤖 Android</span>
+                  <ExternalLink className="w-3 h-3 text-[#10b981]" />
+                </a>
+                <a
+                  href="https://apps.apple.com/app/nfc-tools/id1252962749"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-[#1a172e] hover:bg-[#252042] text-white font-semibold border border-[#383256] transition inline-flex items-center gap-1"
+                >
+                  <span>🍎 iOS</span>
+                  <ExternalLink className="w-3 h-3 text-[#00b4d8]" />
+                </a>
+                <a
+                  href="https://www.wakdev.com/apps/nfc-tools.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-[#381423] hover:bg-[#4a1a2e] text-[#ff5c8a] font-bold border border-[#ec1a65]/40 transition inline-flex items-center gap-1"
+                >
+                  <span>Open Web</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 w-full">
