@@ -304,7 +304,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
   }, [district]);
 
   return (
-    <div className="flex flex-col gap-4 pb-20 max-w-xl mx-auto text-white">
+    <div className="flex flex-col gap-4 pb-28 sm:pb-36 max-w-xl mx-auto text-white">
       {/* 1. TARGET METRO STATION CONTAINER (PRODUCTION-GRADE REFINED) */}
       <section aria-label="Target Metro Station" className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3.5">
         {/* Header inside container */}

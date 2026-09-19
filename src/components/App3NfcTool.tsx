@@ -241,16 +241,25 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
     );
     setNfcWriteStatus('scanning');
     setIsApproachModalOpen(true);
+
+    // Auto-execute write or read action
+    setTimeout(() => {
+      executeNfcAction(action);
+    }, 200);
   };
 
   // Perform actual Web NFC or Simulated scan/write
-  const handleExecuteNfcAction = async () => {
+  const executeNfcAction = async (forcedAction?: string) => {
+    const action = forcedAction || approachAction;
     playNfcTapSound();
+    setNfcWriteStatus('scanning');
+
+    let webNfcHandled = false;
 
     if (isNfcSupported && !isInIframe) {
       try {
         const ndef = new (window as any).NDEFReader();
-        if (approachAction === 'read') {
+        if (action === 'read') {
           await ndef.scan();
           ndef.onreading = (event: any) => {
             playNfcSuccessSound();
@@ -269,10 +278,10 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
               ],
             });
             setNfcWriteStatus('success');
-            setIsApproachModalOpen(false);
+            setTimeout(() => setIsApproachModalOpen(false), 1200);
           };
-          return;
-        } else if (approachAction === 'write') {
+          webNfcHandled = true;
+        } else if (action === 'write' || action === 'copy_infinity') {
           const recordsToWrite = recordsQueue.map((r) => ({
             recordType: r.type === 'url' ? 'url' : 'text',
             data: r.fullUrl || r.value,
@@ -283,41 +292,43 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
           setNfcWriteStatus('success');
           onCardWritten();
           addBatchRecord();
+          webNfcHandled = true;
           setTimeout(() => setIsApproachModalOpen(false), 1200);
-          return;
         }
       } catch (err: any) {
-        console.warn('Web NFC error:', err);
+        console.warn('Web NFC direct access fallback:', err);
       }
     }
 
-    // Hardware simulation fallback (e.g. inside iframe / desktop browser)
-    setTimeout(() => {
-      playNfcSuccessSound();
-      setNfcWriteStatus('success');
+    if (!webNfcHandled) {
+      // Hardware simulation fallback (e.g. inside iframe / desktop / non-webnfc browsers)
+      setTimeout(() => {
+        playNfcSuccessSound();
+        setNfcWriteStatus('success');
 
-      if (approachAction === 'read') {
-        setReadTagResult({
-          tagType: 'NXP - NTAG213 (ISO 14443-3A)',
-          serialNumber: '04:8E:2A:9C:1F:6B:80',
-          sizeBytes: 144,
-          writableBytes: 137,
-          isLocked: false,
-          technologies: ['NfcA', 'Ndef'],
-          records: [
-            {
-              type: 'URI / URL',
-              payload: primaryUrl,
-            },
-          ],
-        });
-      } else if (approachAction === 'write' || approachAction === 'copy_infinity') {
-        onCardWritten();
-        addBatchRecord();
-      }
+        if (action === 'read') {
+          setReadTagResult({
+            tagType: 'NXP - NTAG213 (ISO 14443-3A)',
+            serialNumber: '04:8E:2A:9C:1F:6B:80',
+            sizeBytes: 144,
+            writableBytes: 137,
+            isLocked: false,
+            technologies: ['NfcA', 'Ndef'],
+            records: [
+              {
+                type: 'URI / URL',
+                payload: primaryUrl,
+              },
+            ],
+          });
+        } else if (action === 'write' || action === 'copy_infinity' || action === 'erase' || action === 'lock' || action === 'copy') {
+          onCardWritten();
+          addBatchRecord();
+        }
 
-      setTimeout(() => setIsApproachModalOpen(false), 1200);
-    }, 800);
+        setTimeout(() => setIsApproachModalOpen(false), 1200);
+      }, 700);
+    }
   };
 
   const addBatchRecord = () => {
@@ -396,7 +407,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-28 sm:pb-36">
       {/* APP 3 HEADER BANNER */}
       <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#ec1a65]/10 via-[#a822d8]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -502,11 +513,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
         >
           <Edit3 className="w-4 h-4" />
           <span>WRITE</span>
-          {recordsQueue.length > 0 && (
-            <span className="w-5 h-5 rounded-full bg-white text-[#110f22] text-[10px] font-bold flex items-center justify-center">
-              {recordsQueue.length}
-            </span>
-          )}
         </button>
 
         <button
@@ -767,9 +773,9 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                     {recordsQueue.map((record) => (
                       <div
                         key={record.id}
-                        className="bg-[#110f22] border border-[#27233e] hover:border-[#383256] rounded-2xl p-4 flex items-center justify-between gap-3 transition group"
+                        className="bg-[#110f22] border border-[#27233e] hover:border-[#383256] rounded-2xl p-3.5 flex items-center justify-between gap-3 transition group"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="w-9 h-9 rounded-xl bg-[#1a172e] text-[#00b4d8] flex items-center justify-center shrink-0">
                             {record.type === 'url' ? (
                               <Globe className="w-4 h-4 text-[#ec1a65]" />
@@ -779,14 +785,14 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                               <Edit3 className="w-4 h-4 text-[#a822d8]" />
                             )}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="text-xs font-bold text-white truncate">{record.description}</div>
                             <div className="text-[11px] font-mono text-[#00b4d8] truncate">{record.fullUrl}</div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-[10px] font-mono text-[#8e8aab] bg-[#1a172e] px-2 py-1 rounded-md">
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-mono text-[#8e8aab] bg-[#1a172e] px-2 py-1 rounded-md border border-[#27233e]">
                             {record.bytes} Bytes
                           </span>
                           <button
@@ -1432,7 +1438,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
             <div className="flex items-center gap-2 w-full">
               <button
                 type="button"
-                onClick={handleExecuteNfcAction}
+                onClick={() => executeNfcAction()}
                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-xs shadow-lg hover:opacity-95 transition"
               >
                 Tap Card

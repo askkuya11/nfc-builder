@@ -93,8 +93,8 @@ export default function App() {
       <div
         className={`w-full flex-1 flex flex-col mx-auto transition-all duration-200 relative ${
           isPhoneFrame
-            ? 'max-w-[420px] my-4 rounded-[40px] border-4 border-[#27233e] shadow-2xl overflow-hidden bg-[#0d0b18] min-h-[850px] pb-16'
-            : 'max-w-6xl pb-16 px-2 sm:px-4'
+            ? 'max-w-[420px] my-4 rounded-[40px] border-4 border-[#27233e] shadow-2xl overflow-hidden bg-[#0d0b18] min-h-[850px] pb-28'
+            : 'max-w-6xl pb-28 sm:pb-32 px-2 sm:px-4'
         }`}
       >
         {/* App Header matching the image */}
@@ -107,7 +107,7 @@ export default function App() {
         />
 
         {/* Dynamic Tab Body View */}
-        <main className="flex-1 px-3.5 pt-3 pb-8">
+        <main className="flex-1 px-3.5 pt-3 pb-24 sm:pb-28">
           {activeTab === 'scout' && (
             <App1MapScout
               onSelectLead={handleSelectLead}

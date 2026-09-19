@@ -354,7 +354,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-5 pb-20 text-white">
+    <div className="flex flex-col gap-5 pb-28 sm:pb-36 text-white">
       {/* App Header & Banner */}
       <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
