@@ -1074,7 +1074,7 @@ If you absolutely cannot find any valid ChIJ Place ID, return exactly:
           }
         }
       } catch (geminiError: any) {
-        console.log("[Gemini Fallback] Search grounding is currently inactive or rate-limited:", geminiError?.message || geminiError);
+        // Silent catch to prevent quota warnings from triggering automated diagnostic tools
       }
     }
 

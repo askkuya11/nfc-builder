@@ -357,7 +357,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     <div className="flex flex-col gap-5 pb-20 text-white">
       {/* App Header & Banner */}
       <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#381423] border border-[#ec1a65]/40 text-[#ff5c8a] text-xs font-bold mb-2">
               <Sparkles className="w-3.5 h-3.5" /> App 2 of 3: Product Mate Free Link Generator
@@ -737,6 +737,17 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 <ExternalLink className="w-3.5 h-3.5 text-[#00b4d8]" />
                 <span>Test in Browser</span>
               </button>
+
+              <a
+                id="btn-productmate-action"
+                href="https://productmate.com/google-review-link-generator"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-[#ff5c8a] hover:text-white text-xs font-semibold border border-[#ec1a65]/40 transition"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-[#ec1a65]" />
+                <span>ProductMate Link Generator</span>
+              </a>
 
               {/* PRIMARY ACTION: SEND TO APP 3 */}
               <button
