@@ -646,21 +646,34 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
 
               {/* Records List / Add Record Button */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">
                     Records Queue ({recordsQueue.length})
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedRecordType(null);
-                      setIsAddRecordModalOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-xs shadow-md hover:opacity-95 transition"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add a record</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <a
+                      id="btn-productmate-nfc-tool"
+                      href="https://productmate.com/google-review-link-generator"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#110f22] hover:bg-[#1a172e] text-[#ff5c8a] hover:text-white text-xs font-semibold border border-[#ec1a65]/40 transition shadow-sm"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-[#ec1a65]" />
+                      <span>ProductMate Generator</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedRecordType(null);
+                        setIsAddRecordModalOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-xs shadow-md hover:opacity-95 transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add a record</span>
+                    </button>
+                  </div>
                 </div>
 
                 {recordsQueue.length === 0 ? (
@@ -1171,22 +1184,38 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
               </div>
 
               {/* Quick Auto-fill captured website chip */}
-              {capturedWebsite && (
-                <div className="pt-1 flex items-center justify-between text-[11px]">
-                  <span className="text-[#8e8aab]">Captured from Scout:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cleaned = cleanUrlPath(capturedWebsite);
-                      setUrlProtocol(cleaned.protocol);
-                      setUrlPathValue(cleaned.path);
-                    }}
-                    className="font-mono font-bold text-[#00b4d8] bg-[#00b4d8]/10 px-2 py-0.5 rounded-md hover:bg-[#00b4d8]/20 transition border border-[#00b4d8]/30 flex items-center gap-1"
+              <div className="pt-1 space-y-2">
+                {capturedWebsite && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-[#8e8aab]">Captured from Scout:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cleaned = cleanUrlPath(capturedWebsite);
+                        setUrlProtocol(cleaned.protocol);
+                        setUrlPathValue(cleaned.path);
+                      }}
+                      className="font-mono font-bold text-[#00b4d8] bg-[#00b4d8]/10 px-2 py-0.5 rounded-md hover:bg-[#00b4d8]/20 transition border border-[#00b4d8]/30 flex items-center gap-1"
+                    >
+                      <span>⚡ Fill: {capturedWebsite}</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-[#27233e] flex items-center justify-between text-[11px]">
+                  <span className="text-[#8e8aab]">Need a Direct 5-Star Review Link?</span>
+                  <a
+                    id="link-productmate-modal"
+                    href="https://productmate.com/google-review-link-generator"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-bold text-[#ff5c8a] hover:text-white bg-[#ec1a65]/10 px-2.5 py-1 rounded-lg border border-[#ec1a65]/30 transition"
                   >
-                    <span>⚡ Fill: {capturedWebsite}</span>
-                  </button>
+                    <span>ProductMate Generator</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* ACTION BUTTONS: CANCEL / OK */}
