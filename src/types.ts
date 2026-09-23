@@ -78,6 +78,14 @@ export interface GisIndoorBusiness {
   rating: number;
   pitchOpportunity?: 'high' | 'medium' | 'established';
   isTargetLead?: boolean;
+  openingTime?: string;
+  closingTime?: string;
+  hoursLabel?: string;
+  isOpenNow?: boolean;
+  daysOpen?: string;
+  website?: string;
+  directReviewUrl?: string;
+  googleMapsUrl?: string;
 }
 
 export interface GisBuildingInfo {
@@ -86,6 +94,7 @@ export interface GisBuildingInfo {
   makaniNumber: string;
   gisId: string;
   gisUrl: string;
+  googleMapsUrl?: string;
   gisSearchQuery: string;
   floorsCount: number;
   totalOrganizations: number;
@@ -95,6 +104,11 @@ export interface GisBuildingInfo {
   entrances: GisBuildingEntrance[];
   indoorBusinesses: GisIndoorBusiness[];
   salesAdvantageTip: string;
+  metroStation?: string;
+  metroExit?: string;
+  distanceFromMetro?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export type CardTheme = 'gold_black' | 'google_clean' | 'instagram_sunset' | 'matte_noir' | 'dubai_emerald';
@@ -122,4 +136,28 @@ export interface NfcBatchItem {
   timestamp: string;
   status: 'pending' | 'written' | 'verified' | 'sold';
   priceAed: number;
+}
+
+export interface CollatedCustomerLead {
+  id: string;
+  businessName: string;
+  district: string;
+  address?: string;
+  category?: string;
+  targetUrl: string;
+  type: 'google_review' | 'instagram';
+  placeId?: string | null;
+  instagramHandle?: string;
+  websiteUrl?: string;
+  rating?: number;
+  reviewCount?: number;
+  priceAed?: number;
+  timestamp: string;
+  status: 'pending' | 'written' | 'verified';
+  writtenAt?: string;
+  fieldNotes?: string;
+  visitOrder?: number;
+  phone?: string;
+  footsteps?: number;
+  makaniNumber?: string;
 }

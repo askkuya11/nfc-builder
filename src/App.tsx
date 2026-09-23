@@ -3,7 +3,12 @@ import { AppHeader } from './components/AppHeader';
 import { App1MapScout } from './components/App1MapScout';
 import { App2ProductMate } from './components/App2ProductMate';
 import { App3NfcTool } from './components/App3NfcTool';
-import { AppTab, BusinessLead } from './types';
+import { AppTab, BusinessLead, CollatedCustomerLead } from './types';
+import {
+  getInitialCollatedCustomers,
+  createCollatedLeadFromBusinessLead,
+  saveSelectedHistory,
+} from './utils/collateHelper';
 import { MapPin, Zap, Radio, Smartphone, Monitor } from 'lucide-react';
 
 export default function App() {
@@ -20,13 +25,53 @@ export default function App() {
   const [writtenCount, setWrittenCount] = useState<number>(3);
   const [isPhoneFrame, setIsPhoneFrame] = useState<boolean>(false);
 
-  // Step 1 -> Step 2 Hand-off
+  // Pre-trip Field Visit Plan & Selected History (starts empty until user selects targets)
+  const [collatedCustomers, setCollatedCustomers] = useState<CollatedCustomerLead[]>(() =>
+    getInitialCollatedCustomers()
+  );
+
+  const updateCollatedCustomers = (updater: CollatedCustomerLead[] | ((prev: CollatedCustomerLead[]) => CollatedCustomerLead[])) => {
+    setCollatedCustomers((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      saveSelectedHistory(next);
+      return next;
+    });
+  };
+
+  // Step 1 -> Step 2 Hand-off (Single Selection & Add to Visit History)
   const handleSelectLead = (lead: BusinessLead) => {
     setSelectedLead(lead);
+
+    // Automatically record into Selected History / Field Visit Plan
+    updateCollatedCustomers((prev) => {
+      const exists = prev.some((c) => c.businessName.toLowerCase() === lead.name.toLowerCase());
+      if (exists) {
+        return prev.map((c) =>
+          c.businessName.toLowerCase() === lead.name.toLowerCase()
+            ? { ...c, address: lead.address, rating: lead.rating, reviewCount: lead.reviewCount }
+            : c
+        );
+      }
+      const newLead = createCollatedLeadFromBusinessLead(lead, prev.length + 1);
+      return [...prev, newLead];
+    });
+
     setActiveTab('generator');
   };
 
-  // Step 2 -> Step 3 Hand-off
+  // Toggle lead in 10-20 Field Visit Plan directly from Map Scout
+  const handleToggleVisitLead = (lead: BusinessLead) => {
+    updateCollatedCustomers((prev) => {
+      const exists = prev.some((c) => c.businessName.toLowerCase() === lead.name.toLowerCase());
+      if (exists) {
+        return prev.filter((c) => c.businessName.toLowerCase() !== lead.name.toLowerCase());
+      }
+      const newLead = createCollatedLeadFromBusinessLead(lead, prev.length + 1);
+      return [...prev, newLead];
+    });
+  };
+
+  // Step 2 -> Step 3 Hand-off (Single)
   const handleSendToNfcTool = (payload: {
     businessName: string;
     district: string;
@@ -36,6 +81,24 @@ export default function App() {
     websiteUrl?: string;
   }) => {
     setNfcPayload(payload);
+    setActiveTab('nfc');
+  };
+
+  // Step 2 -> Step 3 Hand-off (Batch)
+  const handleSendBatchToNfcTool = (batch?: CollatedCustomerLead[]) => {
+    if (batch && batch.length > 0) {
+      updateCollatedCustomers(batch);
+      // Pre-load the first pending company into active NFC payload
+      const firstPending = batch.find((c) => c.status === 'pending') || batch[0];
+      setNfcPayload({
+        businessName: firstPending.businessName,
+        district: firstPending.district,
+        targetUrl: firstPending.targetUrl,
+        type: firstPending.type,
+        instagramHandle: firstPending.instagramHandle,
+        websiteUrl: firstPending.websiteUrl,
+      });
+    }
     setActiveTab('nfc');
   };
 
@@ -112,6 +175,9 @@ export default function App() {
             <App1MapScout
               onSelectLead={handleSelectLead}
               selectedLeadId={selectedLead?.id}
+              plannedVisitLeads={collatedCustomers}
+              onToggleVisitLead={handleToggleVisitLead}
+              onGoToProductMate={() => setActiveTab('generator')}
             />
           )}
 
@@ -119,6 +185,9 @@ export default function App() {
             <App2ProductMate
               initialLead={selectedLead}
               onSendToNfcTool={handleSendToNfcTool}
+              collatedCustomers={collatedCustomers}
+              onUpdateCollatedCustomers={updateCollatedCustomers}
+              onSendBatchToNfcTool={handleSendBatchToNfcTool}
             />
           )}
 
@@ -127,6 +196,8 @@ export default function App() {
               initialPayload={nfcPayload}
               onCardWritten={handleCardWritten}
               writtenCount={writtenCount}
+              collatedCustomers={collatedCustomers}
+              onUpdateCollatedCustomers={updateCollatedCustomers}
             />
           )}
         </main>

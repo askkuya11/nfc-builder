@@ -15,8 +15,17 @@ import {
   Mail,
   Globe,
   Clipboard,
+  Users,
+  Layers,
+  Download,
+  Search,
+  Trash2,
+  Radio,
+  Plus,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
-import { BusinessLead } from '../types';
+import { BusinessLead, CollatedCustomerLead } from '../types';
 import { deriveBusinessWebsite } from '../utils/businessWebsiteUtils';
 import {
   isValidPlaceId,
@@ -25,6 +34,10 @@ import {
   buildGoogleReviewUrl,
   hexPairToPlaceIdBrowser,
 } from '../utils/googlePlaceIdUtils';
+import {
+  collateTargetCompanies,
+  exportCollatedCustomersCsv,
+} from '../utils/collateHelper';
 
 interface App2ProductMateProps {
   initialLead?: BusinessLead | null;
@@ -36,11 +49,17 @@ interface App2ProductMateProps {
     instagramHandle?: string;
     websiteUrl?: string;
   }) => void;
+  collatedCustomers?: CollatedCustomerLead[];
+  onUpdateCollatedCustomers?: (customers: CollatedCustomerLead[]) => void;
+  onSendBatchToNfcTool?: (batch?: CollatedCustomerLead[]) => void;
 }
 
 export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   initialLead,
   onSendToNfcTool,
+  collatedCustomers = [],
+  onUpdateCollatedCustomers,
+  onSendBatchToNfcTool,
 }) => {
   // Mode: Google Review Link or Instagram NFC Link
   const [mode, setMode] = useState<'google' | 'instagram'>('google');
@@ -65,6 +84,14 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
   const [businessWebsite, setBusinessWebsite] = useState<string>(
     initialLead?.websiteUrl || deriveBusinessWebsite(initialLead?.name || 'Dubai Gourmet Bistro')
   );
+
+  // Batch collation state
+  const [collateBatchSize, setCollateBatchSize] = useState<number>(15);
+  const [isCollatingBatch, setIsCollatingBatch] = useState<boolean>(false);
+  const [collatedSearchTerm, setCollatedSearchTerm] = useState<string>('');
+  const [collatedStatusFilter, setCollatedStatusFilter] = useState<'all' | 'pending' | 'written'>('all');
+  const [copiedBatchLeadId, setCopiedBatchLeadId] = useState<string | null>(null);
+  const [copiedAllLinks, setCopiedAllLinks] = useState<boolean>(false);
 
   // Input Change Handlers that clear generated state immediately when the business details change
   const handleBusinessNameChange = (val: string) => {
@@ -352,6 +379,145 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       websiteUrl: businessWebsite || deriveBusinessWebsite(businessName),
     });
   };
+
+  // --- BATCH COLLATION HANDLERS ---
+
+  // Batch Collate 10-20 Companies
+  const handleBatchCollate = (count: number) => {
+    setIsCollatingBatch(true);
+    setTimeout(() => {
+      const generated = collateTargetCompanies(count, district, collatedCustomers);
+      const merged = [...collatedCustomers, ...generated];
+      onUpdateCollatedCustomers?.(merged);
+      setIsCollatingBatch(false);
+      setSuccessBanner(`Successfully collated ${generated.length} target companies in ${district} with Direct Review URLs!`);
+    }, 400);
+  };
+
+  // Add the current single edited lead to the collated batch
+  const handleAddCurrentToCollation = () => {
+    const isGoogle = mode === 'google';
+    const targetUrl = isGoogle ? generatedReviewUrl : generatedInstagramUrl;
+    if (!targetUrl) {
+      alert('Please generate a review URL first before adding to the collated batch.');
+      return;
+    }
+
+    const exists = collatedCustomers.some(
+      (c) => c.businessName.toLowerCase() === businessName.toLowerCase()
+    );
+
+    if (exists) {
+      setSuccessBanner(`"${businessName}" is already in the collated customer batch!`);
+      return;
+    }
+
+    const newItem: CollatedCustomerLead = {
+      id: `collate-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      businessName: businessName || 'Dubai Local Business',
+      district: district || 'Dubai',
+      category: 'General Commercial Lead',
+      targetUrl,
+      type: isGoogle ? 'google_review' : 'instagram',
+      placeId: isGoogle ? placeId : null,
+      instagramHandle: isGoogle ? undefined : instagramHandle.replace(/^@/, ''),
+      websiteUrl: businessWebsite || deriveBusinessWebsite(businessName),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'pending',
+      priceAed: 199,
+    };
+
+    onUpdateCollatedCustomers?.([newItem, ...collatedCustomers]);
+    setSuccessBanner(`Added "${businessName}" to collated customer queue! Ready for NFC Writer.`);
+  };
+
+  // Load a customer from collated list back into the editor
+  const handleLoadCollatedIntoEditor = (c: CollatedCustomerLead) => {
+    setBusinessName(c.businessName);
+    setDistrict(c.district);
+    setBusinessWebsite(c.websiteUrl || deriveBusinessWebsite(c.businessName));
+    if (c.type === 'instagram') {
+      setMode('instagram');
+      setInstagramHandle(c.instagramHandle || c.businessName.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      setGeneratedInstagramUrl(c.targetUrl);
+    } else {
+      setMode('google');
+      setPlaceId(c.placeId || null);
+      setGeneratedReviewUrl(c.targetUrl);
+      setMapLinkInput(c.targetUrl);
+    }
+    setSuccessBanner(`Loaded "${c.businessName}" into Product Mate preview & editor.`);
+    window.scrollTo({ top: 180, behavior: 'smooth' });
+  };
+
+  // Remove a customer from the collated list
+  const handleRemoveCollated = (id: string) => {
+    const updated = collatedCustomers.filter((c) => c.id !== id);
+    onUpdateCollatedCustomers?.(updated);
+  };
+
+  // Clear all collated
+  const handleClearCollated = () => {
+    if (window.confirm('Clear all collated companies in batch?')) {
+      onUpdateCollatedCustomers?.([]);
+    }
+  };
+
+  // Export collated customers to CSV
+  const handleExportCsv = () => {
+    exportCollatedCustomersCsv(collatedCustomers);
+  };
+
+  // Copy all direct links
+  const handleCopyAllLinks = () => {
+    if (!collatedCustomers.length) return;
+    const text = collatedCustomers
+      .map((c, i) => `${i + 1}. ${c.businessName} (${c.district}): ${c.targetUrl}`)
+      .join('\n');
+    navigator.clipboard.writeText(text);
+    setCopiedAllLinks(true);
+    setTimeout(() => setCopiedAllLinks(false), 2000);
+  };
+
+  // Send single customer straight to NFC Tool
+  const handleSendSingleToNfc = (c: CollatedCustomerLead) => {
+    onSendToNfcTool({
+      businessName: c.businessName,
+      district: c.district,
+      targetUrl: c.targetUrl,
+      type: c.type,
+      instagramHandle: c.instagramHandle,
+      websiteUrl: c.websiteUrl,
+    });
+  };
+
+  // Send entire batch to Tab 3 NFC Writer
+  const handleCaptureAllToNfc = () => {
+    if (!collatedCustomers.length) {
+      alert('Please collate at least one customer before capturing in NFC Writer.');
+      return;
+    }
+    onSendBatchToNfcTool?.(collatedCustomers);
+  };
+
+  // Filtered collated list
+  const filteredCollated = collatedCustomers.filter((c) => {
+    const matchesSearch =
+      !collatedSearchTerm.trim() ||
+      c.businessName.toLowerCase().includes(collatedSearchTerm.toLowerCase()) ||
+      c.district.toLowerCase().includes(collatedSearchTerm.toLowerCase()) ||
+      (c.category && c.category.toLowerCase().includes(collatedSearchTerm.toLowerCase()));
+
+    const matchesFilter =
+      collatedStatusFilter === 'all' ||
+      (collatedStatusFilter === 'pending' && c.status === 'pending') ||
+      (collatedStatusFilter === 'written' && c.status === 'written');
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const pendingCount = collatedCustomers.filter((c) => c.status === 'pending').length;
+  const writtenInBatchCount = collatedCustomers.filter((c) => c.status === 'written').length;
 
   return (
     <div className="flex flex-col gap-5 pb-28 sm:pb-36 text-white">
@@ -749,6 +915,18 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                 <span>ProductMate Link Generator</span>
               </a>
 
+              {/* Add Current Lead to Collated Batch */}
+              <button
+                type="button"
+                onClick={handleAddCurrentToCollation}
+                disabled={mode === 'google' && !generatedReviewUrl}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#381423] hover:bg-[#4d1c31] text-[#ff5c8a] border border-[#ec1a65]/40 text-xs font-bold transition shadow-sm disabled:opacity-40"
+                title="Add current business to the collated customer list"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add to Collated Batch</span>
+              </button>
+
               {/* PRIMARY ACTION: SEND TO APP 3 */}
               <button
                 onClick={handleTransferToNfc}
@@ -817,6 +995,386 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* PRE-TRIP FIELD VISIT PLAN & SELECTED BUSINESS HISTORY (10-20 TARGETS)     */}
+      {/* ========================================================================= */}
+      <section className="bg-[#161426] border border-[#27233e] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col gap-5 min-w-0">
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#26223d] pb-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1e1338] border border-[#8b5cf6]/40 text-[#c084fc] text-xs font-bold">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Pre-Trip Field Visit Plan</span>
+              </span>
+              <span className="text-xs font-mono text-[#34d399] bg-[#102a20] px-2.5 py-0.5 rounded-full border border-[#059669]/40">
+                {collatedCustomers.length} / 15 Targets Planned
+              </span>
+              {writtenInBatchCount > 0 && (
+                <span className="text-xs font-mono text-[#34d399] bg-[#102a20] px-2.5 py-0.5 rounded-full border border-[#059669]/40">
+                  {writtenInBatchCount} Written &amp; Packed ✅
+                </span>
+              )}
+              {pendingCount > 0 && (
+                <span className="text-xs font-mono text-amber-300 bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                  {pendingCount} Need NFC Tag Before Trip
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight mt-1.5">
+              Pre-Trip Field Visit Route &amp; Selected Business History
+            </h3>
+            <p className="text-xs text-[#8e8aab] mt-0.5">
+              Plan 10 to 20 target businesses in <strong className="text-white">{district}</strong>, verify direct 5-star Google review links, and burn all NFC cards in Tab 3 before heading out.
+            </p>
+          </div>
+
+          {/* Primary Quick Batch Hand-off CTA */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              type="button"
+              onClick={handleCaptureAllToNfc}
+              disabled={!collatedCustomers.length}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#8b5cf6] via-[#ec1a65] to-[#00b4d8] hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-[#ec1a65]/20 transition disabled:opacity-40"
+            >
+              <Radio className="w-4 h-4 text-white" />
+              <span>Capture All in Tab 3 NFC Writer ({collatedCustomers.length})</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Batch Generator Control Strip */}
+        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Left: 10 - 20 Target Selector & Generate Button */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="text-xs font-semibold text-[#8e8aab] flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-[#ec1a65]" />
+              <span>Collate Target Count:</span>
+            </span>
+
+            {/* Count Selector Pills */}
+            <div className="flex items-center bg-[#1a172e] p-1 rounded-xl border border-[#2e2a48]">
+              {[10, 15, 20].map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => setCollateBatchSize(sz)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    collateBatchSize === sz
+                      ? 'bg-[#ec1a65] text-white shadow-sm'
+                      : 'text-[#8e8aab] hover:text-white'
+                  }`}
+                >
+                  {sz} Companies
+                </button>
+              ))}
+            </div>
+
+            {/* Action: Collate Button */}
+            <button
+              type="button"
+              onClick={() => handleBatchCollate(collateBatchSize)}
+              disabled={isCollatingBatch}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ec1a65] hover:bg-[#d61358] text-white text-xs font-bold transition shadow-md shadow-[#ec1a65]/20 disabled:opacity-50"
+            >
+              {isCollatingBatch ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Collating Targets...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Collate {collateBatchSize} Target Companies</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Right: Batch Utilities (Export CSV, Copy All, Clear) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={!collatedCustomers.length}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#161426] hover:bg-[#1f1c35] text-white border border-[#27233e] text-xs font-semibold transition disabled:opacity-40"
+              title="Download entire batch as CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-[#00b4d8]" />
+              <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyAllLinks}
+              disabled={!collatedCustomers.length}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#161426] hover:bg-[#1f1c35] text-white border border-[#27233e] text-xs font-semibold transition disabled:opacity-40"
+              title="Copy all generated review links to clipboard"
+            >
+              {copiedAllLinks ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#10b981]" />
+                  <span>Copied All!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-[#ec1a65]" />
+                  <span>Copy All Links</span>
+                </>
+              )}
+            </button>
+
+            {collatedCustomers.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearCollated}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#261520] hover:bg-[#381a29] text-rose-300 border border-rose-900/40 text-xs font-semibold transition"
+                title="Clear current collated batch"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-3.5 h-3.5 text-[#6d698a] absolute left-3 top-3 pointer-events-none" />
+            <input
+              type="text"
+              value={collatedSearchTerm}
+              onChange={(e) => setCollatedSearchTerm(e.target.value)}
+              placeholder="Search collated companies, district, category..."
+              className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-[#6d698a] focus:outline-none transition"
+            />
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1 bg-[#110f22] p-1 rounded-xl border border-[#26223d] self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setCollatedStatusFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                collatedStatusFilter === 'all'
+                  ? 'bg-[#27233e] text-white font-bold'
+                  : 'text-[#8e8aab] hover:text-white'
+              }`}
+            >
+              All ({collatedCustomers.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollatedStatusFilter('pending')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                collatedStatusFilter === 'pending'
+                  ? 'bg-amber-950/80 text-amber-300 border border-amber-600/40 font-bold'
+                  : 'text-[#8e8aab] hover:text-white'
+              }`}
+            >
+              Pending NFC ({pendingCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollatedStatusFilter('written')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                collatedStatusFilter === 'written'
+                  ? 'bg-[#102a20] text-[#34d399] border border-[#059669]/40 font-bold'
+                  : 'text-[#8e8aab] hover:text-white'
+              }`}
+            >
+              Written ({writtenInBatchCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Collated Companies List / Table Cards */}
+        {collatedCustomers.length === 0 ? (
+          <div className="bg-[#110f22] border border-dashed border-[#26223d] rounded-2xl p-8 sm:p-10 text-center flex flex-col items-center justify-center gap-3.5">
+            <div className="w-14 h-14 rounded-2xl bg-[#1a172e] border border-[#2e2a48] flex items-center justify-center text-[#ff5c8a]">
+              <Layers className="w-7 h-7" />
+            </div>
+            <div className="max-w-md">
+              <h4 className="text-base font-bold text-white">You haven&apos;t selected any companies yet</h4>
+              <p className="text-xs text-[#8e8aab] mt-1.5 leading-relaxed">
+                Before heading out into the field, compile your 10 to 20 target business visit itinerary. Select targets directly from <strong>Map Scout (Tab 1)</strong> using <span className="text-[#34d399] font-semibold">&ldquo;+ Plan Visit&rdquo;</span>, or auto-plan 15 businesses in {district} below.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2.5 mt-2">
+              <button
+                type="button"
+                onClick={() => handleBatchCollate(15)}
+                disabled={isCollatingBatch}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white text-xs font-bold transition shadow-lg shadow-[#ec1a65]/20 hover:opacity-95"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Auto-Plan 15 Target Businesses in {district}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleAddCurrentToCollation}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#161426] border border-[#27233e] hover:border-[#ec1a65]/50 text-white text-xs font-semibold transition"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#ff5c8a]" />
+                <span>Add &quot;{businessName}&quot; to Visit Plan</span>
+              </button>
+            </div>
+          </div>
+        ) : filteredCollated.length === 0 ? (
+          <div className="bg-[#110f22] border border-[#26223d] rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#1f1c33] flex items-center justify-center text-[#8e8aab]">
+              <Users className="w-6 h-6" />
+            </div>
+            <p className="text-sm font-semibold text-white">No companies match this filter.</p>
+            <p className="text-xs text-[#8e8aab]">Try switching between All, Pending NFC, or Written tabs above.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2.5 max-h-[600px] overflow-y-auto pr-1">
+            {filteredCollated.map((comp, idx) => {
+              const isCopied = copiedBatchLeadId === comp.id;
+
+              return (
+                <div
+                  key={comp.id}
+                  className={`bg-[#110f22] border rounded-2xl p-3 sm:p-4 transition-all hover:border-[#ec1a65]/40 flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                    comp.status === 'written'
+                      ? 'border-[#059669]/30 bg-[#0d1c16]/30'
+                      : 'border-[#26223d]'
+                  }`}
+                >
+                  {/* Left: Stop Index + Company Details */}
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <span className="w-8 h-8 rounded-xl bg-[#1a172e] border border-[#2e2a48] text-xs font-mono font-bold text-[#ff5c8a] flex items-center justify-center shrink-0 mt-0.5">
+                      #{String(idx + 1).padStart(2, '0')}
+                    </span>
+
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold text-[#8e8aab] uppercase tracking-wider">
+                          Stop #{idx + 1}
+                        </span>
+                        <h4 className="text-sm font-bold text-white truncate">
+                          {comp.businessName}
+                        </h4>
+                        {comp.category && (
+                          <span className="text-[10px] font-medium text-[#c084fc] bg-[#2a1745] px-2 py-0.5 rounded-full border border-[#8b5cf6]/30 shrink-0">
+                            {comp.category}
+                          </span>
+                        )}
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border shrink-0 ${
+                            comp.status === 'written'
+                              ? 'text-[#34d399] bg-[#102a20] border-[#059669]/40'
+                              : 'text-amber-300 bg-amber-950/50 border-amber-600/40'
+                          }`}
+                        >
+                          {comp.status === 'written'
+                            ? `NFC In Bag ✅ (${comp.writtenAt || 'Burned'})`
+                            : 'Needs NFC Tag ⚠️'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-[11px] text-[#8e8aab] flex-wrap">
+                        <span>📍 {comp.address || comp.district}</span>
+                        {comp.footsteps && <span>• 🚶 {comp.footsteps}</span>}
+                        {comp.rating && (
+                          <span>• ⭐ {comp.rating} ({comp.reviewCount || 0} reviews)</span>
+                        )}
+                        {comp.websiteUrl && (
+                          <a
+                            href={comp.websiteUrl.startsWith('http') ? comp.websiteUrl : `https://${comp.websiteUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#00b4d8] hover:underline flex items-center gap-1"
+                          >
+                            <Globe className="w-3 h-3" />
+                            <span className="truncate max-w-[120px]">{comp.websiteUrl.replace(/^https?:\/\//, '')}</span>
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Direct URL Box */}
+                      <div className="flex items-center gap-2 mt-1 min-w-0">
+                        <span className="text-[10px] font-bold text-[#ec1a65] uppercase shrink-0">Direct 5★:</span>
+                        <span className="text-[11px] font-mono text-[#00b4d8] truncate max-w-full select-all bg-[#0c0a18] px-2 py-1 rounded-lg border border-[#201d36]">
+                          {comp.targetUrl}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Action Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap self-end md:self-center shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#26223d]/60 w-full md:w-auto justify-end">
+                    {/* Test link */}
+                    <button
+                      type="button"
+                      onClick={() => window.open(comp.targetUrl, '_blank', 'noopener,noreferrer')}
+                      className="p-2 rounded-xl bg-[#161426] hover:bg-[#1f1c35] text-[#00b4d8] border border-[#27233e] text-xs font-semibold transition"
+                      title="Open Review Link in Browser"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Copy Link */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(comp.targetUrl);
+                        setCopiedBatchLeadId(comp.id);
+                        setTimeout(() => setCopiedBatchLeadId(null), 1800);
+                      }}
+                      className="p-2 rounded-xl bg-[#161426] hover:bg-[#1f1c35] text-white border border-[#27233e] text-xs font-semibold transition"
+                      title="Copy Direct Review URL"
+                    >
+                      {isCopied ? (
+                        <Check className="w-3.5 h-3.5 text-[#10b981]" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 text-[#8e8aab]" />
+                      )}
+                    </button>
+
+                    {/* Load into Editor & Dual QR */}
+                    <button
+                      type="button"
+                      onClick={() => handleLoadCollatedIntoEditor(comp)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a172e] hover:bg-[#25203f] text-[#ff5c8a] border border-[#ec1a65]/30 text-xs font-semibold transition"
+                      title="Load into top QR Code Preview & Editor"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </button>
+
+                    {/* Single NFC Write Jump */}
+                    <button
+                      type="button"
+                      onClick={() => handleSendSingleToNfc(comp)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] hover:opacity-95 text-white text-xs font-bold transition shadow-sm"
+                      title="Transfer directly to NFC Tool"
+                    >
+                      <Radio className="w-3.5 h-3.5" />
+                      <span>Write Tag</span>
+                    </button>
+
+                    {/* Remove */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCollated(comp.id)}
+                      className="p-2 rounded-xl bg-[#1a1016] hover:bg-[#2b1522] text-rose-400 border border-rose-900/30 text-xs transition"
+                      title="Remove from batch"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

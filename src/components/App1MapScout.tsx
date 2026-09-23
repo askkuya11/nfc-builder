@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BusinessLead, GisIndoorBusiness } from '../types';
+import { BusinessLead, GisIndoorBusiness, CollatedCustomerLead } from '../types';
 import {
   REAL_DUBAI_BUSINESSES,
   DUBAI_METRO_STATIONS,
@@ -13,7 +13,11 @@ import { RealInteractiveRadarMap } from './RealInteractiveRadarMap';
 import { GisBuildingModal } from './GisBuildingModal';
 import { MobileFilterSheet } from './MobileFilterSheet';
 import { StationPickerSheet, parseStationInfo } from './StationPickerSheet';
-import { generateGisBuildingData } from '../utils/gisDubaiDirectory';
+import {
+  generateGisBuildingData,
+  getBuildingsForMetroStation,
+  exportBuildingCompaniesToCsv,
+} from '../utils/gisDubaiDirectory';
 import {
   Search,
   Star,
@@ -35,11 +39,22 @@ import {
   ShoppingBag,
   X,
   MapPin,
+  Building2,
+  Download,
+  ExternalLink,
+  Zap,
+  Clock,
+  CheckCircle2,
+  Plus,
+  Layers,
 } from 'lucide-react';
 
 interface App1MapScoutProps {
   onSelectLead: (lead: BusinessLead) => void;
   selectedLeadId?: string;
+  plannedVisitLeads?: CollatedCustomerLead[];
+  onToggleVisitLead?: (lead: BusinessLead) => void;
+  onGoToProductMate?: () => void;
 }
 
 export const DISTRICT_CENTERS: Record<string, { lat: number; lng: number; sectorName: string; landmark: string }> = {
@@ -104,6 +119,9 @@ const CATEGORIES = [
 export const App1MapScout: React.FC<App1MapScoutProps> = ({
   onSelectLead,
   selectedLeadId,
+  plannedVisitLeads = [],
+  onToggleVisitLead,
+  onGoToProductMate,
 }) => {
   const [district, setDistrict] = useState<string>('Al Rigga (Red Line)');
   const [category, setCategory] = useState<string>("Men's Barbershops & Gents Salons");
@@ -112,6 +130,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
   const [customSearch, setCustomSearch] = useState<string>('barber');
   const [stationLineFilter, setStationLineFilter] = useState<'all' | 'red' | 'green'>('all');
   const [stationQuickSearch, setStationQuickSearch] = useState<string>('');
+  const [isStationSearchExpanded, setIsStationSearchExpanded] = useState<boolean>(false);
   const [scoutAdjacentCorridor, setScoutAdjacentCorridor] = useState<boolean>(true);
   const [targetCount, setTargetCount] = useState<number>(50);
 
@@ -145,9 +164,76 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
   const [gisModalLead, setGisModalLead] = useState<BusinessLead | null>(null);
   const [isGisModalOpen, setIsGisModalOpen] = useState<boolean>(false);
 
+  // Buildings located within the active metro station sector
+  const areaBuildings = useMemo(() => {
+    return getBuildingsForMetroStation(district);
+  }, [district]);
+
+  const [selectedBuildingName, setSelectedBuildingName] = useState<string>('');
+  const [downloadCsvSuccess, setDownloadCsvSuccess] = useState<boolean>(false);
+  const [autoTargetPulse, setAutoTargetPulse] = useState<boolean>(false);
+
+  // Automatically reset building selection when switching metro stations
+  useEffect(() => {
+    setSelectedBuildingName('');
+  }, [district]);
+
+  const activeBuilding = useMemo(() => {
+    if (selectedBuildingName) {
+      const found = areaBuildings.find((b) => b.buildingName === selectedBuildingName);
+      if (found) return found;
+    }
+    return areaBuildings[0] || null;
+  }, [areaBuildings, selectedBuildingName]);
+
+  const handleAutoSelectBuilding = () => {
+    if (!areaBuildings.length) return;
+    setAutoTargetPulse(true);
+    setTimeout(() => setAutoTargetPulse(false), 1200);
+
+    let best = areaBuildings[0];
+    let maxScore = -1;
+    for (const b of areaBuildings) {
+      const sweetSpotCount = b.indoorBusinesses.filter((biz) => biz.reviewCount < 50).length;
+      const score = sweetSpotCount * 10 + b.indoorBusinesses.length;
+      if (score > maxScore) {
+        maxScore = score;
+        best = b;
+      }
+    }
+    setSelectedBuildingName(best.buildingName);
+  };
+
+  const handleDownloadActiveBuildingCsv = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!activeBuilding) return;
+    exportBuildingCompaniesToCsv(activeBuilding);
+    setDownloadCsvSuccess(true);
+    setTimeout(() => setDownloadCsvSuccess(false), 2500);
+  };
+
   const parsedCurrentStation = useMemo(() => {
     return parseStationInfo(district);
   }, [district]);
+
+  const activeSelectedStation = useMemo(() => {
+    const clean = district.toLowerCase().replace(/\(.*?\)/g, '').trim();
+    const found = DUBAI_METRO_STATIONS.find(
+      (s) =>
+        s.toLowerCase().includes(clean) ||
+        clean.includes(s.toLowerCase().replace(/\(.*?\)/g, '').trim())
+    );
+    return found || district;
+  }, [district]);
+
+  const redStations = useMemo(
+    () => DUBAI_METRO_STATIONS.filter((s) => s.includes('Red Line') || s.includes('Red & Green')),
+    []
+  );
+  const greenStations = useMemo(
+    () => DUBAI_METRO_STATIONS.filter((s) => s.includes('Green Line') && !s.includes('Red & Green')),
+    []
+  );
 
   // Quick Station List for the in-card selector
   const quickStations = useMemo(() => {
@@ -180,7 +266,7 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
       setActiveLeadOnMap(existing);
     } else {
       const parentLead = gisModalLead;
-      const bName = parentLead?.buildingInfo?.buildingName || 'Dubai Commercial Center';
+      const bName = parentLead?.buildingInfo?.buildingName || activeBuilding?.buildingName || 'Dubai Commercial Center';
       const syntheticLead: BusinessLead = {
         id: coTenant.id,
         name: coTenant.name,
@@ -189,20 +275,22 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         reviewCount: coTenant.reviewCount,
         district: parentLead ? parentLead.district : district,
         address: `${bName}, ${coTenant.floor}, Unit ${coTenant.unitNumber}, ${parentLead?.district || district}, Dubai`,
-        phone: coTenant.phone || '+971 4 222 1111',
+        phone: coTenant.phone || '+971 4 228 9911',
         placeId: `gis-${coTenant.id}`,
-        mapsUrl: `https://maps.app.goo.gl/yMHn9hGf2T3t9XRN6`,
-        directReviewUrl: `https://search.google.com/local/writereview?placeid=${coTenant.id}`,
+        mapsUrl: coTenant.directReviewUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coTenant.name + ' Dubai')}`,
+        directReviewUrl: coTenant.directReviewUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coTenant.name + ' Dubai')}`,
         pitchOpportunity: coTenant.pitchOpportunity || 'high',
-        pitchAngle: `High-value co-tenant inside ${bName}. Located at ${coTenant.floor}, Unit ${coTenant.unitNumber}.`,
-        lat: parentLead?.lat,
-        lng: parentLead?.lng,
-        footsteps: parentLead?.footsteps,
-        walkMinutes: parentLead?.walkMinutes,
-        metroExit: parentLead?.metroExit,
+        pitchAngle: `High-value co-tenant inside ${bName} (${coTenant.floor}, Unit ${coTenant.unitNumber}). Operating: ${coTenant.openingTime} - ${coTenant.closingTime}.`,
+        lat: parentLead?.lat || activeBuilding?.lat,
+        lng: parentLead?.lng || activeBuilding?.lng,
+        footsteps: parentLead?.footsteps || 60,
+        walkMinutes: parentLead?.walkMinutes || 2,
+        metroExit: parentLead?.metroExit || activeBuilding?.metroExit,
         walkingGuide: `Inside ${bName} (${coTenant.floor})`,
-        buildingInfo: parentLead?.buildingInfo,
+        buildingInfo: parentLead?.buildingInfo || activeBuilding || undefined,
       };
+      syntheticLead.audit = generateGmbAudit(syntheticLead as any);
+      setLeads((prev) => [syntheticLead, ...prev]);
       onSelectLead(syntheticLead);
       setActiveLeadOnMap(syntheticLead);
     }
@@ -373,125 +461,194 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </span>
         </div>
 
-        {/* Line Filter Capsule Switch */}
-        <div className="flex items-center bg-[#110f22] p-1 rounded-full border border-[#26223e]">
-          <button
-            type="button"
-            onClick={() => setStationLineFilter('all')}
-            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold transition-all ${
-              stationLineFilter === 'all'
-                ? 'bg-[#ec1a65] text-white shadow-sm'
-                : 'text-[#8e8aab] hover:text-white'
-            }`}
-          >
-            All (48)
-          </button>
-          <button
-            type="button"
-            onClick={() => setStationLineFilter('red')}
-            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              stationLineFilter === 'red'
-                ? 'bg-[#ff3366] text-white shadow-sm'
-                : 'text-[#8e8aab] hover:text-white'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#ff3366]" />
-            <span>Red (30)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setStationLineFilter('green')}
-            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              stationLineFilter === 'green'
-                ? 'bg-[#10b981] text-white shadow-sm'
-                : 'text-[#8e8aab] hover:text-white'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-            <span>Green (18)</span>
-          </button>
-        </div>
+        {/* Space-Saving Metro Station Dropdown List & Expandable Search */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1.5 z-10">
+                <span
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    parsedCurrentStation.isInterchange
+                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981]'
+                      : parsedCurrentStation.isGreen
+                      ? 'bg-[#10b981]'
+                      : 'bg-[#ff3366]'
+                  }`}
+                />
+              </div>
 
-        {/* Station Search Input with Clear Button and Count */}
-        <div className="relative flex items-center w-full">
-          <Search className="w-4 h-4 text-[#8e8aab] absolute left-3.5 pointer-events-none" />
-          <input
-            type="text"
-            value={stationQuickSearch}
-            onChange={(e) => setStationQuickSearch(e.target.value)}
-            placeholder="Find station: Al Rigga, Union, BurJuman…"
-            className="w-full bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full pl-10 pr-10 py-2 text-xs text-white placeholder-[#6d698a] transition-colors"
-          />
-          {stationQuickSearch ? (
+              <select
+                aria-label="Select Target Metro Station"
+                value={activeSelectedStation}
+                onChange={(e) => {
+                  const newStation = e.target.value;
+                  setDistrict(newStation);
+                  fetchBusinesses(newStation, category);
+                }}
+                className="w-full appearance-none bg-[#110f22] hover:bg-[#181530] border border-[#26223d] hover:border-[#ec1a65]/50 focus:border-[#ec1a65] focus:outline-none focus:ring-1 focus:ring-[#ec1a65] rounded-2xl pl-9 pr-10 py-2.5 text-xs font-bold text-white transition-all cursor-pointer truncate shadow-inner"
+              >
+                <optgroup label="🔴 Red Line Stations (30)">
+                  {redStations.map((s) => {
+                    const info = parseStationInfo(s);
+                    return (
+                      <option key={s} value={s} className="bg-[#161426] text-white py-1">
+                        {info.displayName} — {info.area.split('/')[0].trim()}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+                <optgroup label="🟢 Green Line Stations (18)">
+                  {greenStations.map((s) => {
+                    const info = parseStationInfo(s);
+                    return (
+                      <option key={s} value={s} className="bg-[#161426] text-white py-1">
+                        {info.displayName} — {info.area.split('/')[0].trim()}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              </select>
+
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#8e8aab]">
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Toggle Search & Filter to expand if needed */}
             <button
               type="button"
-              onClick={() => setStationQuickSearch('')}
-              className="absolute right-3 p-1 rounded-full text-[#8e8aab] hover:text-white hover:bg-white/10 transition-colors"
-              title="Clear search"
+              onClick={() => setIsStationSearchExpanded(!isStationSearchExpanded)}
+              className={`h-10 px-3.5 rounded-2xl border flex items-center gap-1.5 text-xs font-bold transition shrink-0 ${
+                isStationSearchExpanded
+                  ? 'bg-[#ec1a65] border-[#ec1a65] text-white shadow-md shadow-[#ec1a65]/25'
+                  : 'bg-[#110f22] border-[#26223d] text-[#8e8aab] hover:text-white hover:border-[#3d3761]'
+              }`}
+              title={isStationSearchExpanded ? 'Hide search and filters' : 'Search and filter stations'}
             >
-              <X className="w-3.5 h-3.5" />
+              <Search className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">{isStationSearchExpanded ? 'Close' : 'Search'}</span>
             </button>
-          ) : (
-            <span className="absolute right-3.5 text-[10px] font-mono text-[#6d698a] pointer-events-none">
-              {quickStations.length}
-            </span>
-          )}
-        </div>
+          </div>
 
-        {/* Station Scrollable List (Fixed clipping, custom dark scrollbar, highlighted active item) */}
-        <div className="bg-[#110f22] border border-[#26223d] rounded-2xl max-h-44 overflow-y-auto p-1.5 space-y-1 focus:outline-none [scrollbar-width:thin] [scrollbar-color:#2f2b4a_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2f2b4a] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#423d66]">
-          {quickStations.length === 0 ? (
-            <div className="py-6 text-center text-xs text-[#8e8aab]">
-              No metro stations match &ldquo;{stationQuickSearch}&rdquo;
-            </div>
-          ) : (
-            quickStations.slice(0, 24).map((station) => {
-              const isSelected =
-                district.toLowerCase().includes(station.toLowerCase().replace(/\(.*?\)/g, '').trim()) ||
-                station.toLowerCase().includes(district.toLowerCase().replace(/\(.*?\)/g, '').trim());
-              const info = parseStationInfo(station);
-              return (
+          {/* Expandable Search & Line Filter Drawer (Collapsed by default to save space) */}
+          {isStationSearchExpanded && (
+            <div className="p-3 bg-[#110f22] border border-[#26223d] rounded-2xl space-y-2.5 animate-in fade-in duration-150">
+              {/* Line Filter Capsule Switch */}
+              <div className="flex items-center bg-[#161426] p-1 rounded-full border border-[#26223e]">
                 <button
-                  key={station}
                   type="button"
-                  onClick={() => {
-                    setDistrict(station);
-                    fetchBusinesses(station, category);
-                  }}
-                  className={`w-full py-2 px-3 text-left flex items-center justify-between gap-2.5 rounded-xl transition-all duration-150 ${
-                    isSelected
-                      ? 'bg-[#381423] border border-[#ec1a65]/50 text-white font-bold shadow-sm'
-                      : 'bg-[#151226]/40 hover:bg-[#1a172e] border border-transparent hover:border-[#27233e] text-[#9f9cb8] hover:text-white'
+                  onClick={() => setStationLineFilter('all')}
+                  className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold transition-all ${
+                    stationLineFilter === 'all'
+                      ? 'bg-[#ec1a65] text-white shadow-sm'
+                      : 'text-[#8e8aab] hover:text-white'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                        info.isInterchange
-                          ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981] ring-1 ring-white/30'
-                          : info.isGreen && !info.isRed
-                          ? 'bg-[#10b981]'
-                          : 'bg-[#ff3366]'
-                      }`}
-                    />
-                    <span className={`text-[13px] truncate ${isSelected ? 'text-white font-bold' : 'text-[#d6d4e8]'}`}>
-                      {info.displayName}
-                    </span>
-                    {isSelected && (
-                      <span className="hidden xs:inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#ec1a65] text-white">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] text-[#787498] truncate max-w-[130px]">
-                      {info.area.split('/')[0].trim()}
-                    </span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-[#ff5c8a] shrink-0" />}
-                  </div>
+                  All (48)
                 </button>
-              );
-            })
+                <button
+                  type="button"
+                  onClick={() => setStationLineFilter('red')}
+                  className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    stationLineFilter === 'red'
+                      ? 'bg-[#ff3366] text-white shadow-sm'
+                      : 'text-[#8e8aab] hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#ff3366]" />
+                  <span>Red (30)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStationLineFilter('green')}
+                  className={`flex-1 py-1.5 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    stationLineFilter === 'green'
+                      ? 'bg-[#10b981] text-white shadow-sm'
+                      : 'text-[#8e8aab] hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+                  <span>Green (18)</span>
+                </button>
+              </div>
+
+              {/* Station Search Input with Clear Button */}
+              <div className="relative flex items-center w-full">
+                <Search className="w-4 h-4 text-[#8e8aab] absolute left-3.5 pointer-events-none" />
+                <input
+                  type="text"
+                  value={stationQuickSearch}
+                  onChange={(e) => setStationQuickSearch(e.target.value)}
+                  placeholder="Find station: Al Rigga, Union, BurJuman…"
+                  className="w-full bg-[#161426] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full pl-10 pr-10 py-2 text-xs text-white placeholder-[#6d698a] transition-colors"
+                />
+                {stationQuickSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => setStationQuickSearch('')}
+                    className="absolute right-3 p-1 rounded-full text-[#8e8aab] hover:text-white hover:bg-white/10 transition-colors"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="absolute right-3.5 text-[10px] font-mono text-[#6d698a] pointer-events-none">
+                    {quickStations.length}
+                  </span>
+                )}
+              </div>
+
+              {/* Station Scrollable List */}
+              <div className="max-h-40 overflow-y-auto p-1 space-y-1 focus:outline-none [scrollbar-width:thin] [scrollbar-color:#2f2b4a_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2f2b4a] [&::-webkit-scrollbar-thumb]:rounded-full">
+                {quickStations.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-[#8e8aab]">
+                    No metro stations match &ldquo;{stationQuickSearch}&rdquo;
+                  </div>
+                ) : (
+                  quickStations.slice(0, 24).map((station) => {
+                    const isSelected =
+                      district.toLowerCase().includes(station.toLowerCase().replace(/\(.*?\)/g, '').trim()) ||
+                      station.toLowerCase().includes(district.toLowerCase().replace(/\(.*?\)/g, '').trim());
+                    const info = parseStationInfo(station);
+                    return (
+                      <button
+                        key={station}
+                        type="button"
+                        onClick={() => {
+                          setDistrict(station);
+                          fetchBusinesses(station, category);
+                          setIsStationSearchExpanded(false);
+                        }}
+                        className={`w-full py-1.5 px-3 text-left flex items-center justify-between gap-2.5 rounded-xl transition-all ${
+                          isSelected
+                            ? 'bg-[#381423] border border-[#ec1a65]/50 text-white font-bold'
+                            : 'bg-[#151226]/60 hover:bg-[#1a172e] border border-transparent hover:border-[#27233e] text-[#9f9cb8] hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              info.isInterchange
+                                ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981]'
+                                : info.isGreen && !info.isRed
+                                ? 'bg-[#10b981]'
+                                : 'bg-[#ff3366]'
+                            }`}
+                          />
+                          <span className={`text-xs truncate ${isSelected ? 'text-white font-bold' : 'text-[#d6d4e8]'}`}>
+                            {info.displayName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 text-[10px] text-[#787498]">
+                          <span>{info.area.split('/')[0].trim()}</span>
+                          {isSelected && <Check className="w-3 h-3 text-[#ff5c8a]" />}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           )}
         </div>
 
@@ -663,6 +820,196 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </div>
         </div>
 
+        {/* Target Commercial Building Suite (2GIS Extraction Engine) */}
+        {activeBuilding && (
+          <div className="bg-[#161426] border border-[#27233e] rounded-2xl p-3.5 space-y-3 shadow-md">
+            {/* Building Header & Auto-Target CTA */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#00b4d8]/15 border border-[#00b4d8]/30 flex items-center justify-center text-[#00b4d8]">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Target Building in {parsedCurrentStation.displayName}
+                    </span>
+                    <span className="text-[10px] bg-[#110f22] text-[#00b4d8] font-mono px-1.5 py-0.2 rounded border border-[#27233e]">
+                      2GIS Active
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-[#8e8aab]">
+                    Auto-select high-density multi-company complexes to extract all leads & hours
+                  </p>
+                </div>
+              </div>
+
+              {/* Auto Select Button */}
+              <button
+                type="button"
+                onClick={handleAutoSelectBuilding}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-all shadow-md ${
+                  autoTargetPulse
+                    ? 'scale-105 bg-gradient-to-r from-[#10b981] to-[#059669] shadow-[#10b981]/40'
+                    : 'bg-gradient-to-r from-[#00b4d8] via-[#a822d8] to-[#ec1a65] hover:opacity-95 active:scale-95 shadow-[#ec1a65]/20'
+                }`}
+                title="Automatically target the commercial building with highest sweet-spot review opportunities"
+              >
+                <Zap className="w-3.5 h-3.5 fill-white" />
+                <span>Auto-Target Best Building</span>
+              </button>
+            </div>
+
+            {/* Building Selector Carousel / Chips */}
+            <div>
+              <label className="block text-[10px] font-bold text-[#8e8aab] uppercase tracking-wider mb-1.5">
+                Select Building to Target ({areaBuildings.length} Available):
+              </label>
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 select-none">
+                {areaBuildings.map((b) => {
+                  const isSelected = b.buildingName === activeBuilding.buildingName;
+                  const sweetCount = b.indoorBusinesses.filter((x) => x.reviewCount < 50).length;
+                  return (
+                    <button
+                      key={b.buildingName}
+                      type="button"
+                      onClick={() => setSelectedBuildingName(b.buildingName)}
+                      className={`px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 whitespace-nowrap transition-all shrink-0 ${
+                        isSelected
+                          ? 'bg-[#ec1a65] text-white font-bold shadow-md shadow-[#ec1a65]/30'
+                          : 'bg-[#110f22] border border-[#27233e] text-[#a5a0c0] hover:text-white hover:border-[#3d3761]'
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>{b.buildingName.replace(' Commercial Building', '').replace(' Office Tower', '')}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                          isSelected ? 'bg-black/30 text-white' : 'bg-[#1c1930] text-[#00b4d8]'
+                        }`}
+                      >
+                        {b.indoorBusinesses.length} Co.
+                      </span>
+                      {sweetCount > 0 && !isSelected && (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-amber-400"
+                          title={`${sweetCount} sweet spot leads`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Active Building Details Card */}
+            <div className="bg-[#110f22] border border-[#27233e] rounded-xl p-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[#27233e]">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-[#8e8aab] mb-0.5">
+                    <span className="font-mono bg-[#161426] px-2 py-0.5 rounded border border-[#27233e] text-[#00b4d8]">
+                      Makani {activeBuilding.makaniNumber}
+                    </span>
+                    {activeBuilding.distanceFromMetro && (
+                      <span className="text-[#34d399] font-medium flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {activeBuilding.distanceFromMetro}
+                      </span>
+                    )}
+                    <span>• {activeBuilding.floorsCount} Floors</span>
+                  </div>
+                  <h4 className="text-base font-extrabold text-white truncate">
+                    {activeBuilding.buildingName}
+                  </h4>
+                  {activeBuilding.arabicName && (
+                    <span className="text-xs text-[#8e8aab] font-arabic" dir="rtl">
+                      {activeBuilding.arabicName}
+                    </span>
+                  )}
+                </div>
+
+                {/* Building Telemetry Badges */}
+                <div className="flex items-center gap-1.5 flex-wrap sm:justify-end">
+                  <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-[#064e3b]/40 text-[#34d399] border border-[#10b981]/40 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {activeBuilding.indoorBusinesses.filter((b) => b.isOpenNow).length} Open Now
+                  </span>
+                  <span className="text-xs font-bold px-2 py-1 rounded-lg bg-[#241c0a] text-[#fbbf24] border border-[#785a10] flex items-center gap-1">
+                    <Flame className="w-3 h-3 fill-amber-400" />
+                    {activeBuilding.indoorBusinesses.filter((b) => b.reviewCount < 50).length} Sweet Spot
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons for this Building */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5">
+                {/* 1. Open 2GIS Target Location */}
+                <a
+                  href={activeBuilding.gisUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 px-3 rounded-xl bg-[#00b4d8]/15 hover:bg-[#00b4d8]/25 border border-[#00b4d8]/40 hover:border-[#00b4d8] text-[#00b4d8] text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 group"
+                  title="Open this target building directly on 2GIS Dubai"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+                  <span className="truncate">2GIS.ae</span>
+                </a>
+
+                {/* 2. Open Google Maps */}
+                <a
+                  href={
+                    activeBuilding.googleMapsUrl ||
+                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      `${activeBuilding.buildingName} ${activeBuilding.metroStation || 'Dubai'}`
+                    )}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 px-3 rounded-xl bg-[#ea4335]/15 hover:bg-[#ea4335]/25 border border-[#ea4335]/40 hover:border-[#ea4335] text-[#ff7d70] text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 group"
+                  title="Open this target building directly on Google Maps"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-[#ea4335] group-hover:scale-110 transition-transform shrink-0" />
+                  <span className="truncate">Google Maps</span>
+                  <ExternalLink className="w-3 h-3 text-[#ff7d70]/70 shrink-0" />
+                </a>
+
+                {/* 3. Download Companies (CSV) */}
+                <button
+                  type="button"
+                  onClick={handleDownloadActiveBuildingCsv}
+                  className="h-9 px-3 rounded-xl bg-gradient-to-r from-[#10b981] to-[#059669] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#10b981]/25 hover:opacity-95 transition active:scale-95"
+                  title="Download all companies with open/close timings, phones, and reviews to CSV"
+                >
+                  {downloadCsvSuccess ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
+                      <span className="truncate">Downloaded!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Export CSV</span>
+                    </>
+                  )}
+                </button>
+
+                {/* 4. Extract Companies Directory */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGisModalLead(null);
+                    setIsGisModalOpen(true);
+                  }}
+                  className="h-9 px-3 rounded-xl bg-[#1f1b36] hover:bg-[#282346] border border-[#3b3560] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
+                  title="Extract and view complete indoor company directory"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
+                  <span className="truncate">Companies ({activeBuilding.indoorBusinesses.length})</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Target Business Category Section */}
         <div>
           <label className="block text-xs font-bold text-white mb-2">
@@ -763,6 +1110,45 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           Highest NFC Card Close Rate
         </span>
       </section>
+
+      {/* 2b. FIELD VISIT PLANNING STATUS BAR */}
+      {plannedVisitLeads.length > 0 && (
+        <section
+          aria-label="Planned Field Visit Route"
+          className="bg-[#1b122c] border border-[#ec1a65]/50 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-in fade-in"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#381423] text-[#ff5c8a] flex items-center justify-center shrink-0 border border-[#ec1a65]/30">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
+                <span>Field Visit Route:</span>
+                <span className="text-[#34d399] font-mono bg-[#102a20] px-2 py-0.5 rounded-full border border-[#059669]/40">
+                  {plannedVisitLeads.length} / 15 Targets Selected
+                </span>
+                {plannedVisitLeads.length >= 10 && plannedVisitLeads.length <= 20 && (
+                  <span className="text-[10px] text-[#fbbf24] bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-600/30">
+                    Perfect 10–20 Batch Size!
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#8e8aab] mt-0.5">
+                Stops planned before heading out into the field. Burn NFC cards in Tab 3.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onGoToProductMate}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#ec1a65]/20 shrink-0 self-end sm:self-center"
+          >
+            <span>Review Plan & NFC Tags</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </section>
+      )}
 
       {/* 3. RESULTS HEADER */}
       <section aria-label="Results and Controls" className="flex items-center justify-between gap-3 pt-1 px-1">
@@ -872,15 +1258,29 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-3">
+                <div className="flex items-center gap-2 pt-3 flex-wrap">
                   <button
                     type="button"
                     onClick={() => onSelectLead(activeLeadOnMap)}
                     className="h-9 px-4 rounded-full bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-[13px] shadow-md shadow-[#ec1a65]/20 flex items-center gap-1.5"
                   >
-                    <span>Select for Product Mate</span>
+                    <span>Process in Product Mate</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
+                  {onToggleVisitLead && (
+                    <button
+                      type="button"
+                      onClick={() => onToggleVisitLead(activeLeadOnMap)}
+                      className="h-9 px-3.5 rounded-full bg-[#110f22] border border-[#26223d] hover:border-[#ec1a65]/50 text-white text-[13px] font-medium transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#ff5c8a]" />
+                      <span>
+                        {plannedVisitLeads.some((p) => p.businessName.toLowerCase() === activeLeadOnMap.name.toLowerCase())
+                          ? 'In Visit Plan ✓'
+                          : '+ Plan Stop'}
+                      </span>
+                    </button>
+                  )}
                   <a
                     href={activeLeadOnMap.mapsUrl}
                     target="_blank"
@@ -1011,17 +1411,53 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
                         </a>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => onSelectLead(lead)}
-                        className={`h-8 px-4 rounded-full text-[13px] font-bold transition-all ${
-                          isSelected
-                            ? 'bg-[#381423] border border-[#ec1a65]/50 text-[#ff5c8a]'
-                            : 'bg-[#ec1a65] text-white hover:opacity-90 shadow-md shadow-[#ec1a65]/20'
-                        }`}
-                      >
-                        {isSelected ? 'Selected' : 'Select'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onToggleVisitLead && (() => {
+                          const isPlanned = plannedVisitLeads.some(
+                            (p) => p.businessName.toLowerCase() === lead.name.toLowerCase()
+                          );
+                          const plannedIndex = plannedVisitLeads.findIndex(
+                            (p) => p.businessName.toLowerCase() === lead.name.toLowerCase()
+                          );
+
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => onToggleVisitLead(lead)}
+                              className={`h-8 px-3 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+                                isPlanned
+                                  ? 'bg-[#102a20] border border-[#059669]/60 text-[#34d399]'
+                                  : 'bg-[#110f22] border border-[#27233e] text-[#8e8aab] hover:text-white hover:border-[#ec1a65]/40'
+                              }`}
+                              title={isPlanned ? 'Remove from 10–20 Field Visit Plan' : 'Add to 10–20 Field Visit Plan'}
+                            >
+                              {isPlanned ? (
+                                <>
+                                  <Check className="w-3 h-3 text-[#10b981]" />
+                                  <span>Stop #{plannedIndex + 1}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-3 h-3" />
+                                  <span>+ Plan Visit</span>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
+
+                        <button
+                          type="button"
+                          onClick={() => onSelectLead(lead)}
+                          className={`h-8 px-4 rounded-full text-[13px] font-bold transition-all ${
+                            isSelected
+                              ? 'bg-[#381423] border border-[#ec1a65]/50 text-[#ff5c8a]'
+                              : 'bg-[#ec1a65] text-white hover:opacity-90 shadow-md shadow-[#ec1a65]/20'
+                          }`}
+                        >
+                          {isSelected ? 'Selected' : 'Select'}
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
@@ -1066,6 +1502,9 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
       {/* 2GIS Building Modal */}
       <GisBuildingModal
         lead={gisModalLead}
+        building={gisModalLead?.buildingInfo || activeBuilding}
+        allAreaBuildings={areaBuildings}
+        onSwitchBuilding={(b) => setSelectedBuildingName(b.buildingName)}
         isOpen={isGisModalOpen}
         onClose={() => setIsGisModalOpen(false)}
         onSelectCoTenant={handleSelectCoTenant}

@@ -36,11 +36,16 @@ import {
   ChevronDown,
   Download,
   Smartphone,
+  ArrowRight,
+  SkipForward,
+  Briefcase,
+  MapPin,
 } from 'lucide-react';
 import { NfcCardPreview } from './NfcCardPreview';
-import { CardTheme, NfcChipType, NfcBatchItem } from '../types';
+import { CardTheme, NfcChipType, NfcBatchItem, CollatedCustomerLead } from '../types';
 import { playNfcSuccessSound, playNfcTapSound } from '../utils/audio';
 import { deriveBusinessWebsite, cleanUrlPath } from '../utils/businessWebsiteUtils';
+import { exportCollatedCustomersCsv } from '../utils/collateHelper';
 
 interface App3NfcToolProps {
   initialPayload?: {
@@ -53,6 +58,8 @@ interface App3NfcToolProps {
   } | null;
   onCardWritten: () => void;
   writtenCount: number;
+  collatedCustomers?: CollatedCustomerLead[];
+  onUpdateCollatedCustomers?: (customers: CollatedCustomerLead[]) => void;
 }
 
 export interface NfcRecordItem {
@@ -77,9 +84,11 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
   initialPayload,
   onCardWritten,
   writtenCount,
+  collatedCustomers = [],
+  onUpdateCollatedCustomers,
 }) => {
-  // Sub-Tab State: READ, WRITE, OTHER, TASKS
-  const [activeTab, setActiveTab] = useState<'read' | 'write' | 'other' | 'tasks'>('write');
+  // Sub-Tab State: READ, WRITE, WRITTEN (FIELD PACK), OTHER, TASKS
+  const [activeTab, setActiveTab] = useState<'read' | 'write' | 'written' | 'other' | 'tasks'>('write');
 
   // Business / Card customization state
   const [businessName, setBusinessName] = useState<string>('Al Safadi Gourmet');
@@ -162,6 +171,39 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
     },
   ]);
 
+  // Collated Customer Batch from Product Mate (10-20 companies)
+  const [selectedCollatedId, setSelectedCollatedId] = useState<string | null>(null);
+  const [continuousBatchMode, setContinuousBatchMode] = useState<boolean>(true);
+  const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [collatedFilterStatus, setCollatedFilterStatus] = useState<'all' | 'pending' | 'written'>('all');
+
+  // Select a company from collated batch and load into programmer
+  const handleSelectCollatedLead = (lead: CollatedCustomerLead) => {
+    setSelectedCollatedId(lead.id);
+    setBusinessName(lead.businessName);
+    setDistrict(lead.district);
+
+    const site = lead.websiteUrl || deriveBusinessWebsite(lead.businessName);
+    setCapturedWebsite(site);
+
+    const cleaned = cleanUrlPath(lead.targetUrl);
+    setUrlProtocol(cleaned.protocol);
+    setUrlPathValue(cleaned.path);
+
+    const newRec: NfcRecordItem = {
+      id: `rec-url-${Date.now()}`,
+      type: 'url',
+      protocolPrefix: cleaned.protocol,
+      value: cleaned.path,
+      fullUrl: lead.targetUrl,
+      description: `URL: ${lead.businessName} (${lead.type === 'instagram' ? 'Instagram' : 'Google Review'})`,
+      bytes: new TextEncoder().encode(lead.targetUrl).length + 8,
+    };
+
+    setRecordsQueue([newRec]);
+    setBatchNotice(`Loaded #${lead.businessName} into active card programmer.`);
+  };
+
   // Synchronize when hand-off payload is received from App 2 (Product Mate)
   useEffect(() => {
     if (initialPayload) {
@@ -192,8 +234,21 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
 
       setRecordsQueue(newRecs);
       setActiveTab('write');
+
+      // Check if matches an existing item in collatedCustomers
+      const match = collatedCustomers.find(
+        (c) => c.businessName.toLowerCase() === initialPayload.businessName.toLowerCase()
+      );
+      if (match) {
+        setSelectedCollatedId(match.id);
+      }
+    } else if (collatedCustomers.length > 0 && !selectedCollatedId) {
+      const firstPending = collatedCustomers.find((c) => c.status === 'pending') || collatedCustomers[0];
+      if (firstPending) {
+        handleSelectCollatedLead(firstPending);
+      }
     }
-  }, [initialPayload]);
+  }, [initialPayload, collatedCustomers]);
 
   // Hardware capabilities check
   useEffect(() => {
@@ -218,7 +273,37 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
   // Primary URL for card preview
   const primaryUrl = recordsQueue.find((r) => r.type === 'url')?.fullUrl || 'https://www.wakdev.com';
 
+  // Collated customer batch metrics
+  const collatedWrittenCount = collatedCustomers.filter((c) => c.status === 'written').length;
+  const currentActiveCollated = collatedCustomers.find((c) => c.id === selectedCollatedId) || collatedCustomers[0];
+
   // --- ACTIONS ---
+
+  // Handle successful NFC Card write completion
+  const handleNfcWriteSuccess = () => {
+    onCardWritten();
+    addBatchRecord();
+
+    // If active lead is in collatedCustomers, mark as written
+    if (selectedCollatedId && collatedCustomers.length > 0) {
+      const updated = collatedCustomers.map((c) =>
+        c.id === selectedCollatedId ? { ...c, status: 'written' as const } : c
+      );
+      onUpdateCollatedCustomers?.(updated);
+
+      if (continuousBatchMode) {
+        const nextPending = updated.find((c) => c.status === 'pending');
+        if (nextPending) {
+          setTimeout(() => {
+            handleSelectCollatedLead(nextPending);
+            setBatchNotice(`Tag written successfully! Auto-advanced to: ${nextPending.businessName} (Ready to Tap)`);
+          }, 1000);
+        } else {
+          setBatchNotice('🎉 All collated companies in batch have been successfully written!');
+        }
+      }
+    }
+  };
 
   // Trigger Approach Modal for Read / Write / Erase / Lock
   const handleOpenApproachModal = (action: string, msg?: string) => {
@@ -290,8 +375,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
           await ndef.write({ records: recordsToWrite });
           playNfcSuccessSound();
           setNfcWriteStatus('success');
-          onCardWritten();
-          addBatchRecord();
+          handleNfcWriteSuccess();
           webNfcHandled = true;
           setTimeout(() => setIsApproachModalOpen(false), 1200);
         }
@@ -322,8 +406,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
             ],
           });
         } else if (action === 'write' || action === 'copy_infinity' || action === 'erase' || action === 'lock' || action === 'copy') {
-          onCardWritten();
-          addBatchRecord();
+          handleNfcWriteSuccess();
         }
 
         setTimeout(() => setIsApproachModalOpen(false), 1200);
@@ -487,12 +570,12 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
         </div>
       </div>
 
-      {/* TOP SUB-TAB NAVIGATION (READ, WRITE, OTHER, TASKS) */}
+      {/* TOP SUB-TAB NAVIGATION (READ, WRITE, WRITTEN PACK, OTHER, TASKS) */}
       <div className="bg-[#161426] border border-[#27233e] rounded-2xl p-1.5 flex items-center gap-1 shadow-lg overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab('read')}
-          className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs transition ${
+          className={`flex-1 min-w-[90px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs transition ${
             activeTab === 'read'
               ? 'bg-[#ec1a65] text-white shadow-lg shadow-[#ec1a65]/30'
               : 'text-[#8e8aab] hover:text-white hover:bg-[#1a172e]'
@@ -505,7 +588,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('write')}
-          className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs transition ${
+          className={`flex-1 min-w-[90px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs transition ${
             activeTab === 'write'
               ? 'bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#00a8f3] text-white shadow-lg shadow-[#a822d8]/30'
               : 'text-[#8e8aab] hover:text-white hover:bg-[#1a172e]'
@@ -515,10 +598,26 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
           <span>WRITE</span>
         </button>
 
+        {/* FIELD PACK: ALREADY WRITTEN NFC CARDS */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('written')}
+          className={`flex-1 min-w-[130px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs transition ${
+            activeTab === 'written'
+              ? 'bg-[#10b981] text-white shadow-lg shadow-[#10b981]/30'
+              : collatedWrittenCount > 0
+              ? 'text-[#34d399] bg-[#102a20]/60 border border-[#059669]/40 hover:bg-[#102a20]'
+              : 'text-[#8e8aab] hover:text-white hover:bg-[#1a172e]'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>WRITTEN ({collatedWrittenCount})</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveTab('other')}
-          className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs transition ${
+          className={`flex-1 min-w-[90px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs transition ${
             activeTab === 'other'
               ? 'bg-[#a822d8] text-white shadow-lg shadow-[#a822d8]/30'
               : 'text-[#8e8aab] hover:text-white hover:bg-[#1a172e]'
@@ -531,7 +630,7 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('tasks')}
-          className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs transition ${
+          className={`flex-1 min-w-[90px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs transition ${
             activeTab === 'tasks'
               ? 'bg-[#00b4d8] text-white shadow-lg shadow-[#00b4d8]/30'
               : 'text-[#8e8aab] hover:text-white hover:bg-[#1a172e]'
@@ -685,6 +784,272 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 </div>
               </div>
 
+              {/* ================================================================= */}
+              {/* COLLATED CUSTOMER BATCH QUEUE SECTION                            */}
+              {/* ================================================================= */}
+              <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-xl">
+                {/* Header Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#27233e] pb-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#381423] text-[#ff5c8a] border border-[#ec1a65]/40 text-[11px] font-bold">
+                        <Layers className="w-3 h-3" />
+                        <span>Product Mate Batch Queue</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-[#34d399] bg-[#102a20] px-2 py-0.5 rounded-full border border-[#059669]/40">
+                        {collatedWrittenCount} / {collatedCustomers.length} Programmed
+                      </span>
+                      {collatedCustomers.length > 0 && collatedWrittenCount === collatedCustomers.length && (
+                        <span className="text-[11px] font-bold text-[#10b981] bg-[#10b981]/15 px-2 py-0.5 rounded-full border border-[#10b981]/30">
+                          Batch Complete! 🎉
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-sm font-bold text-white mt-1">
+                      Collated Customers Assembly Line ({collatedCustomers.length} Targets)
+                    </h4>
+                    <p className="text-[11px] text-[#8e8aab]">
+                      Program 10–20 business review tags in rapid succession without retyping URLs.
+                    </p>
+                  </div>
+
+                  {/* Batch Controls */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Continuous Mode Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setContinuousBatchMode(!continuousBatchMode)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
+                        continuousBatchMode
+                          ? 'bg-[#102a20] text-[#34d399] border-[#059669]/40'
+                          : 'bg-[#1a172e] text-[#8e8aab] border-[#2e2a48]'
+                      }`}
+                      title="Auto-advance to next customer tag on tap completion"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${continuousBatchMode ? 'bg-[#34d399] animate-pulse' : 'bg-[#8e8aab]'}`} />
+                      <span>Continuous Tap Mode</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => exportCollatedCustomersCsv(collatedCustomers)}
+                      disabled={!collatedCustomers.length}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-white border border-[#2e2a48] text-xs font-semibold transition disabled:opacity-40"
+                      title="Export CSV"
+                    >
+                      <Download className="w-3.5 h-3.5 text-[#00b4d8]" />
+                      <span>CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                {collatedCustomers.length > 0 && (
+                  <div className="w-full bg-[#1a172e] h-2 rounded-full overflow-hidden border border-[#27233e]">
+                    <div
+                      className="bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#10b981] h-full transition-all duration-300"
+                      style={{
+                        width: `${collatedCustomers.length > 0 ? (collatedWrittenCount / collatedCustomers.length) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Batch Notification Toast */}
+                {batchNotice && (
+                  <div className="bg-[#1a142e] border border-[#a822d8]/40 rounded-xl px-3 py-2 flex items-center justify-between text-xs text-[#c084fc] animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
+                      <span>{batchNotice}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBatchNotice(null)}
+                      className="text-[#8e8aab] hover:text-white text-[10px] ml-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* Active Target Banner */}
+                {currentActiveCollated ? (
+                  <div className="bg-[#161329] border border-[#ec1a65]/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-mono font-bold text-[#ff5c8a] bg-[#381423] px-2 py-0.5 rounded-md border border-[#ec1a65]/30">
+                          Active Target #{collatedCustomers.findIndex((c) => c.id === currentActiveCollated.id) + 1}
+                        </span>
+                        <h5 className="text-xs sm:text-sm font-bold text-white truncate">
+                          {currentActiveCollated.businessName}
+                        </h5>
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                            currentActiveCollated.status === 'written'
+                              ? 'text-[#34d399] bg-[#102a20] border-[#059669]/40'
+                              : 'text-amber-300 bg-amber-950/50 border-amber-600/40'
+                          }`}
+                        >
+                          {currentActiveCollated.status === 'written' ? 'Written ✅' : 'Pending Tap'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#8e8aab] mt-1 truncate">
+                        <span>📍 {currentActiveCollated.district}</span>
+                        <span className="mx-1.5">•</span>
+                        <span className="text-[#00b4d8] font-mono">{currentActiveCollated.targetUrl}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenApproachModal(
+                            'write',
+                            `Approach NFC Tag to program ${currentActiveCollated.businessName}`
+                          )
+                        }
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] hover:opacity-95 text-white font-bold text-xs shadow-md transition"
+                      >
+                        <Radio className="w-3.5 h-3.5" />
+                        <span>Tap Tag Now</span>
+                      </button>
+
+                      {/* Next Button */}
+                      {collatedCustomers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const curIdx = collatedCustomers.findIndex(
+                              (c) => c.id === currentActiveCollated.id
+                            );
+                            const nextIdx = (curIdx + 1) % collatedCustomers.length;
+                            handleSelectCollatedLead(collatedCustomers[nextIdx]);
+                          }}
+                          className="p-2 rounded-xl bg-[#110f22] hover:bg-[#1f1c35] text-[#8e8aab] hover:text-white border border-[#27233e] text-xs transition"
+                          title="Skip to next company"
+                        >
+                          <SkipForward className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#161329] border border-dashed border-[#27233e] rounded-xl p-4 text-center text-xs text-[#8e8aab]">
+                    No company selected. Click on any company pill below or go to Tab 2 (Product Mate) to collate 10–20 leads.
+                  </div>
+                )}
+
+                {/* Horizontal Scrollable Chips of all Collated Companies */}
+                {collatedCustomers.length > 0 ? (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-[#8e8aab]">
+                      <span className="font-semibold">
+                        Select any company to load immediately into tag programmer:
+                      </span>
+                      <span>{collatedCustomers.length} in Queue</span>
+                    </div>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1">
+                      {collatedCustomers.map((lead, idx) => {
+                        const isSelected = lead.id === currentActiveCollated?.id;
+                        const isWritten = lead.status === 'written';
+
+                        return (
+                          <button
+                            key={lead.id}
+                            type="button"
+                            onClick={() => handleSelectCollatedLead(lead)}
+                            className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                              isSelected
+                                ? 'bg-[#ec1a65]/20 border-[#ec1a65] text-white shadow-sm'
+                                : isWritten
+                                ? 'bg-[#102a20]/60 border-[#059669]/30 text-[#8e8aab] hover:text-white'
+                                : 'bg-[#1a172e] border-[#2e2a48] text-[#8e8aab] hover:text-white hover:border-[#ec1a65]/40'
+                            }`}
+                          >
+                            <span className="font-mono text-[10px] text-[#ff5c8a]">
+                              #{String(idx + 1).padStart(2, '0')}
+                            </span>
+                            <span className="truncate max-w-[130px] font-bold">
+                              {lead.businessName}
+                            </span>
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                isWritten ? 'bg-[#34d399]' : 'bg-amber-400'
+                              }`}
+                              title={isWritten ? 'Written' : 'Pending'}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#161329] border border-dashed border-[#27233e] rounded-xl p-4 text-center text-xs text-[#8e8aab]">
+                    💡 <strong>Quick Collation Tip:</strong> Go to <strong>Product Mate (Tab 2)</strong> and click <strong>&quot;Collate 10–20 Target Companies&quot;</strong> to automatically load the batch here!
+                  </div>
+                )}
+
+                {/* ALREADY WRITTEN CARDS FOR FIELD VISIT SUMMARY STRIP */}
+                {collatedCustomers.length > 0 && (
+                  <div className="border-t border-[#27233e] pt-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
+                        <span className="text-xs font-bold text-white">
+                          Cards Written for Field Trip ({collatedWrittenCount} / {collatedCustomers.length})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('written')}
+                        className="text-[11px] font-bold text-[#34d399] hover:underline flex items-center gap-1"
+                      >
+                        <span>View Full Field Bag ({collatedWrittenCount})</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {collatedWrittenCount === 0 ? (
+                      <p className="text-[11px] text-[#8e8aab] bg-[#161329] p-2.5 rounded-xl border border-[#27233e]">
+                        No cards written yet. Tap <strong>&quot;Tap Tag Now&quot;</strong> above to write the first NFC tag for your field visit!
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {collatedCustomers
+                          .filter((c) => c.status === 'written')
+                          .slice(0, 4)
+                          .map((card) => (
+                            <div
+                              key={card.id}
+                              className="bg-[#161329] border border-[#059669]/30 rounded-xl p-2.5 flex items-center justify-between text-xs"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <div className="font-bold text-white truncate flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-[#10b981] shrink-0" />
+                                  <span className="truncate">{card.businessName}</span>
+                                </div>
+                                <div className="text-[10px] text-[#8e8aab] truncate mt-0.5">
+                                  📍 {card.district} • {card.writtenAt || 'Written'}
+                                </div>
+                              </div>
+                              <a
+                                href={card.targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg bg-[#110f22] text-[#00b4d8] hover:text-white border border-[#27233e] shrink-0"
+                                title="Test review link in browser"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Chip Type & Lock Settings Row */}
               <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
@@ -739,17 +1104,6 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                     Records Queue ({recordsQueue.length})
                   </span>
                   <div className="flex items-center gap-2">
-                    <a
-                      id="btn-productmate-nfc-tool"
-                      href="https://productmate.com/google-review-link-generator"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#110f22] hover:bg-[#1a172e] text-[#ff5c8a] hover:text-white text-xs font-semibold border border-[#ec1a65]/40 transition shadow-sm"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-[#ec1a65]" />
-                      <span>ProductMate Generator</span>
-                    </a>
-
                     <button
                       type="button"
                       onClick={() => {
@@ -820,6 +1174,170 @@ export const App3NfcTool: React.FC<App3NfcToolProps> = ({
                 <Radio className="w-5 h-5" />
                 <span>WRITE / {totalWriteBytes} BYTES ({recordsQueue.length} RECORD)</span>
               </button>
+            </div>
+          )}
+
+          {/* TAB: WRITTEN NFC CARDS / FIELD PACK */}
+          {activeTab === 'written' && (
+            <div className="bg-[#161426] border border-[#27233e] rounded-3xl p-6 shadow-2xl space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#27233e] pb-4">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#102a20] border border-[#059669]/40 text-[#34d399] text-xs font-bold">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Field Bag Ready</span>
+                    </span>
+                    <span className="text-xs font-mono text-[#34d399] bg-[#102a20] px-2.5 py-0.5 rounded-full border border-[#059669]/40">
+                      {collatedWrittenCount} Cards Programmed
+                    </span>
+                    {collatedCustomers.length > 0 && (
+                      <span className="text-xs font-mono text-[#8e8aab] bg-[#1a172e] px-2.5 py-0.5 rounded-full border border-[#27233e]">
+                        Total Itinerary: {collatedCustomers.length} stops
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-black text-white text-base sm:text-lg mt-1.5 flex items-center gap-2">
+                    <span>🎒 Written NFC Cards Packed for Field Visit</span>
+                  </h3>
+                  <p className="text-xs text-[#8e8aab] mt-0.5">
+                    List of customer NFC plaques and cards programmed with 5-Star review URLs ready to hand out during sales visits.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('write')}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-xs shadow-md hover:opacity-95 transition"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Write Next Card</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportCollatedCustomersCsv(collatedCustomers.filter((c) => c.status === 'written'))}
+                    disabled={collatedWrittenCount === 0}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#110f22] border border-[#27233e] text-white hover:text-[#34d399] text-xs font-semibold transition disabled:opacity-40"
+                    title="Export CSV Manifest of Written Cards"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#00b4d8]" />
+                    <span>Manifest CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Metric Highlights Banner */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-3.5">
+                  <div className="text-[10px] text-[#8e8aab] uppercase tracking-wider font-semibold">Cards in Bag</div>
+                  <div className="text-xl font-black text-[#34d399] font-mono mt-0.5">{collatedWrittenCount}</div>
+                  <div className="text-[10px] text-[#8e8aab]">NFC tags burned</div>
+                </div>
+                <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-3.5">
+                  <div className="text-[10px] text-[#8e8aab] uppercase tracking-wider font-semibold">Pack Value</div>
+                  <div className="text-xl font-black text-[#fbbf24] font-mono mt-0.5">AED {collatedWrittenCount * cardPrice}</div>
+                  <div className="text-[10px] text-[#8e8aab]">@ AED {cardPrice} / card</div>
+                </div>
+                <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-3.5">
+                  <div className="text-[10px] text-[#8e8aab] uppercase tracking-wider font-semibold">Chip Standard</div>
+                  <div className="text-base font-bold text-white font-mono mt-0.5">{chipType}</div>
+                  <div className="text-[10px] text-[#8e8aab]">NXP NDEF 144B</div>
+                </div>
+                <div className="bg-[#110f22] border border-[#27233e] rounded-2xl p-3.5">
+                  <div className="text-[10px] text-[#8e8aab] uppercase tracking-wider font-semibold">Pending Tags</div>
+                  <div className="text-xl font-black text-amber-400 font-mono mt-0.5">{collatedCustomers.length - collatedWrittenCount}</div>
+                  <div className="text-[10px] text-[#8e8aab]">from 10–20 plan</div>
+                </div>
+              </div>
+
+              {/* WRITTEN CARDS LIST */}
+              {collatedWrittenCount === 0 ? (
+                <div className="bg-[#110f22] border border-dashed border-[#27233e] rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#1a172e] text-[#8e8aab] flex items-center justify-center">
+                    <Briefcase className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-white">No NFC Cards Written Yet</h4>
+                  <p className="text-xs text-[#8e8aab] max-w-md">
+                    Before leaving for your field visit, burn 10–20 NFC tags with Google 5-Star review URLs for the businesses you selected.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('write')}
+                    className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white font-bold text-xs shadow-lg transition"
+                  >
+                    <Radio className="w-4 h-4" />
+                    <span>Burn First Tag Now</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {collatedCustomers
+                    .filter((c) => c.status === 'written')
+                    .map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="bg-[#110f22] border border-[#059669]/40 hover:border-[#059669] rounded-2xl p-4 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md"
+                      >
+                        <div className="flex items-start gap-3 min-w-0">
+                          <span className="w-7 h-7 rounded-xl bg-[#102a20] border border-[#059669]/60 text-xs font-mono font-bold text-[#34d399] flex items-center justify-center shrink-0 mt-0.5">
+                            #{idx + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="font-bold text-white text-sm truncate">{item.businessName}</h5>
+                              <span className="text-[10px] font-mono text-[#34d399] bg-[#102a20] px-2 py-0.5 rounded-full border border-[#059669]/40">
+                                In Bag ✅
+                              </span>
+                              {item.writtenAt && (
+                                <span className="text-[10px] font-mono text-[#8e8aab]">
+                                  Burned at {item.writtenAt}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-[#8e8aab] mt-1 flex items-center gap-2 flex-wrap">
+                              <span>📍 {item.district}</span>
+                              {item.category && <span>• {item.category}</span>}
+                              {item.footsteps && <span>• 🚶 {item.footsteps}</span>}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-mono text-[#00b4d8] truncate max-w-full">
+                              <span className="text-[10px] text-[#ff5c8a] font-bold">NDEF URL:</span>
+                              <span className="truncate bg-[#0a0815] px-2 py-0.5 rounded border border-[#201d36] select-all">
+                                {item.targetUrl}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <a
+                            href={item.targetUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-[#00b4d8] border border-[#27233e] text-xs font-semibold transition"
+                            title="Open review URL in browser to test"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Test Link</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleSelectCollatedLead(item);
+                              handleOpenApproachModal('read', `Approach ${item.businessName} NFC tag to verify records`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#102a20] hover:bg-[#163a2c] text-[#34d399] border border-[#059669]/50 text-xs font-bold transition"
+                            title="Tap physical tag to verify payload"
+                          >
+                            <Scan className="w-3.5 h-3.5" />
+                            <span>Verify Tap</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
 
