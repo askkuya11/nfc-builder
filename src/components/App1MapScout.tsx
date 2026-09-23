@@ -11,7 +11,6 @@ export { DUBAI_METRO_STATIONS, DUBAI_GENERAL_DISTRICTS, DUBAI_DISTRICTS };
 import { generateGmbAudit } from '../utils/gmbEverywhereAudit';
 import { RealInteractiveRadarMap } from './RealInteractiveRadarMap';
 import { GisBuildingModal } from './GisBuildingModal';
-import { MobileFilterSheet } from './MobileFilterSheet';
 import { StationPickerSheet, parseStationInfo } from './StationPickerSheet';
 import {
   generateGisBuildingData,
@@ -180,6 +179,29 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
     );
   }, [areaBuildings]);
 
+  // Custom dropdown states for Metro Station & Building selectors
+  const [isMetroDropdownOpen, setIsMetroDropdownOpen] = useState<boolean>(false);
+  const [metroSearchQuery, setMetroSearchQuery] = useState<string>('');
+  const [isBuildingDropdownOpen, setIsBuildingDropdownOpen] = useState<boolean>(false);
+  const [buildingSearchQuery, setBuildingSearchQuery] = useState<string>('');
+
+  const metroDropdownRef = React.useRef<HTMLDivElement>(null);
+  const buildingDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Click outside listener to auto-close custom dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (metroDropdownRef.current && !metroDropdownRef.current.contains(event.target as Node)) {
+        setIsMetroDropdownOpen(false);
+      }
+      if (buildingDropdownRef.current && !buildingDropdownRef.current.contains(event.target as Node)) {
+        setIsBuildingDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const [selectedBuildingName, setSelectedBuildingName] = useState<string>('all_buildings');
   const [downloadCsvSuccess, setDownloadCsvSuccess] = useState<boolean>(false);
   const [autoTargetPulse, setAutoTargetPulse] = useState<boolean>(false);
@@ -326,6 +348,30 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
     () => DUBAI_METRO_STATIONS.filter((s) => s.includes('Green Line') && !s.includes('Red & Green')),
     []
   );
+
+  const filteredRedStations = useMemo(() => {
+    if (!metroSearchQuery.trim()) return redStations;
+    const q = metroSearchQuery.toLowerCase();
+    return redStations.filter((s) => {
+      const info = parseStationInfo(s);
+      return info.displayName.toLowerCase().includes(q) || s.toLowerCase().includes(q);
+    });
+  }, [redStations, metroSearchQuery]);
+
+  const filteredGreenStations = useMemo(() => {
+    if (!metroSearchQuery.trim()) return greenStations;
+    const q = metroSearchQuery.toLowerCase();
+    return greenStations.filter((s) => {
+      const info = parseStationInfo(s);
+      return info.displayName.toLowerCase().includes(q) || s.toLowerCase().includes(q);
+    });
+  }, [greenStations, metroSearchQuery]);
+
+  const filteredAreaBuildings = useMemo(() => {
+    if (!buildingSearchQuery.trim()) return areaBuildings;
+    const q = buildingSearchQuery.toLowerCase();
+    return areaBuildings.filter((b) => b.buildingName.toLowerCase().includes(q));
+  }, [areaBuildings, buildingSearchQuery]);
 
   const openGisModal = (lead: BusinessLead) => {
     if (!lead.buildingInfo) {
@@ -730,10 +776,10 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </button>
         </div>
 
-        {/* 1. Target Metro Station Selector */}
-        <div className="space-y-1.5">
+        {/* 1. Target Metro Station Custom Dropdown */}
+        <div className="space-y-1.5 relative" ref={metroDropdownRef}>
           <div className="flex items-center justify-between text-xs">
-            <label htmlFor="metro-station-select" className="font-bold text-[#b4b0d0] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+            <label className="font-bold text-[#b4b0d0] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <TrainFront className="w-3.5 h-3.5 text-[#ff5c8a]" />
               <span>Target Metro Station:</span>
             </label>
@@ -751,65 +797,157 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
           </div>
 
           <div className="relative w-full">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1.5 z-10">
-              <span
-                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                  parsedCurrentStation.isInterchange
-                    ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981]'
-                    : parsedCurrentStation.isGreen
-                    ? 'bg-[#10b981]'
-                    : 'bg-[#ff3366]'
-                }`}
-              />
-            </div>
-
-            <select
-              id="metro-station-select"
-              aria-label="Select Target Metro Station"
-              value={activeSelectedStation}
-              onChange={(e) => {
-                const newStation = e.target.value;
-                setDistrict(newStation);
-                setSelectedBuildingName('all_buildings');
-                fetchBusinesses(newStation, category);
+            <button
+              type="button"
+              onClick={() => {
+                setIsMetroDropdownOpen(!isMetroDropdownOpen);
+                setIsBuildingDropdownOpen(false);
               }}
-              className="w-full appearance-none bg-[#110f22] hover:bg-[#181530] border border-[#26223d] hover:border-[#ec1a65]/50 focus:border-[#ec1a65] focus:outline-none focus:ring-1 focus:ring-[#ec1a65] rounded-xl pl-8 pr-9 py-2.5 text-xs sm:text-[13px] font-bold text-white transition-all cursor-pointer truncate shadow-inner"
+              className="w-full bg-[#110f22] hover:bg-[#181530] border border-[#26223d] hover:border-[#ec1a65]/50 focus:border-[#ec1a65] focus:outline-none rounded-xl pl-8 pr-3.5 py-2.5 text-xs sm:text-[13px] font-bold text-white transition-all cursor-pointer text-left truncate shadow-inner flex items-center justify-between"
             >
-              <option value="All Metro Stations" className="bg-[#161426] text-[#00b4d8] font-bold py-1.5">
-                🚇 All Metro Stations (48 Stations • Red & Green Lines)
-              </option>
-              <optgroup label="🔴 Red Line Stations (30)">
-                {redStations.map((s) => {
-                  const info = parseStationInfo(s);
-                  return (
-                    <option key={s} value={s} className="bg-[#161426] text-white py-1">
-                      {info.displayName} — {info.area.split('/')[0].trim()}
-                    </option>
-                  );
-                })}
-              </optgroup>
-              <optgroup label="🟢 Green Line Stations (18)">
-                {greenStations.map((s) => {
-                  const info = parseStationInfo(s);
-                  return (
-                    <option key={s} value={s} className="bg-[#161426] text-white py-1">
-                      {info.displayName} — {info.area.split('/')[0].trim()}
-                    </option>
-                  );
-                })}
-              </optgroup>
-            </select>
+              <div className="flex items-center gap-2 truncate">
+                <span
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    parsedCurrentStation.isInterchange
+                      ? 'bg-gradient-to-r from-[#ff3366] to-[#10b981]'
+                      : parsedCurrentStation.isGreen
+                      ? 'bg-[#10b981]'
+                      : 'bg-[#ff3366]'
+                  }`}
+                />
+                <span className="truncate">{parsedCurrentStation.displayName}</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-[#8e8aab] shrink-0 transition-transform ${isMetroDropdownOpen ? 'rotate-180 text-[#ec1a65]' : ''}`} />
+            </button>
 
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#8e8aab]">
-              <ChevronDown className="w-4 h-4" />
-            </div>
+            {/* Custom Dropdown Popover */}
+            {isMetroDropdownOpen && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#161426] border border-[#2d284a] rounded-2xl shadow-2xl p-2 flex flex-col gap-1.5 backdrop-blur-xl">
+                {/* Quick Search */}
+                <div className="relative flex items-center px-2.5 py-1.5 bg-[#0d0b1a] rounded-xl border border-[#26223d]">
+                  <Search className="w-3.5 h-3.5 text-[#8e8aab] shrink-0 mr-2" />
+                  <input
+                    type="text"
+                    value={metroSearchQuery}
+                    onChange={(e) => setMetroSearchQuery(e.target.value)}
+                    placeholder="Filter 48 metro stations..."
+                    className="w-full bg-transparent text-xs text-white placeholder-[#8e8aab] outline-none font-medium"
+                    autoFocus
+                  />
+                  {metroSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setMetroSearchQuery('')}
+                      className="text-[#8e8aab] hover:text-white p-0.5 ml-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Scrollable Items Container (Max 220px high) */}
+                <div className="max-h-56 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  {/* All Stations Option */}
+                  {(!metroSearchQuery || 'all metro stations'.includes(metroSearchQuery.toLowerCase())) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDistrict('All Metro Stations');
+                        setSelectedBuildingName('all_buildings');
+                        fetchBusinesses('All Metro Stations', category);
+                        setIsMetroDropdownOpen(false);
+                        setMetroSearchQuery('');
+                      }}
+                      className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-between ${
+                        activeSelectedStation.toLowerCase().includes('all')
+                          ? 'bg-[#ec1a65]/20 text-[#ff5c8a] border border-[#ec1a65]/40'
+                          : 'text-[#00b4d8] hover:bg-[#201c3b]'
+                      }`}
+                    >
+                      <span>All Metro Stations (48 Stations)</span>
+                      {activeSelectedStation.toLowerCase().includes('all') && <Check className="w-3.5 h-3.5 text-[#ff5c8a]" />}
+                    </button>
+                  )}
+
+                  {/* Red Line Group */}
+                  {filteredRedStations.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-extrabold text-[#ff708f] uppercase tracking-wider px-2 py-1 flex items-center gap-1.5 opacity-80">
+                        <span className="w-2 h-2 rounded-full bg-[#ff3366]" />
+                        <span>Red Line ({filteredRedStations.length})</span>
+                      </div>
+                      {filteredRedStations.map((s) => {
+                        const info = parseStationInfo(s);
+                        const isSelected = activeSelectedStation === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              setDistrict(s);
+                              setSelectedBuildingName('all_buildings');
+                              fetchBusinesses(s, category);
+                              setIsMetroDropdownOpen(false);
+                              setMetroSearchQuery('');
+                            }}
+                            className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#ec1a65]/20 text-white font-bold border border-[#ec1a65]/40'
+                                : 'text-[#d4d1e8] hover:bg-[#201c3b] hover:text-white'
+                            }`}
+                          >
+                            <span>{info.displayName}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#ff5c8a]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Green Line Group */}
+                  {filteredGreenStations.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-extrabold text-[#34d399] uppercase tracking-wider px-2 py-1 flex items-center gap-1.5 opacity-80">
+                        <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+                        <span>Green Line ({filteredGreenStations.length})</span>
+                      </div>
+                      {filteredGreenStations.map((s) => {
+                        const info = parseStationInfo(s);
+                        const isSelected = activeSelectedStation === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              setDistrict(s);
+                              setSelectedBuildingName('all_buildings');
+                              fetchBusinesses(s, category);
+                              setIsMetroDropdownOpen(false);
+                              setMetroSearchQuery('');
+                            }}
+                            className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#10b981]/20 text-white font-bold border border-[#10b981]/40'
+                                : 'text-[#d4d1e8] hover:bg-[#201c3b] hover:text-white'
+                            }`}
+                          >
+                            <span>{info.displayName}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#34d399]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 2. Nearby Buildings to Metro Selector */}
-        <div className="space-y-1.5">
+        {/* 2. Nearby Buildings Custom Dropdown */}
+        <div className="space-y-1.5 relative" ref={buildingDropdownRef}>
           <div className="flex items-center justify-between text-xs">
-            <label htmlFor="nearby-building-select" className="font-bold text-[#b4b0d0] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+            <label className="font-bold text-[#b4b0d0] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Building2 className="w-3.5 h-3.5 text-[#00b4d8]" />
               <span>Nearby Commercial Buildings:</span>
             </label>
@@ -820,41 +958,98 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
 
           <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-0">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center text-[#00b4d8] z-10">
-                <Building2 className="w-4 h-4" />
-              </div>
-
-              <select
-                id="nearby-building-select"
-                aria-label="Select Nearby Building to Metro"
-                value={selectedBuildingName}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedBuildingName(val);
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBuildingDropdownOpen(!isBuildingDropdownOpen);
+                  setIsMetroDropdownOpen(false);
                 }}
-                className="w-full appearance-none bg-[#110f22] hover:bg-[#181530] border border-[#26223d] hover:border-[#00b4d8]/50 focus:border-[#00b4d8] focus:outline-none focus:ring-1 focus:ring-[#00b4d8] rounded-xl pl-9 pr-9 py-2.5 text-xs sm:text-[13px] font-bold text-white transition-all cursor-pointer truncate shadow-inner"
+                className="w-full bg-[#110f22] hover:bg-[#181530] border border-[#26223d] hover:border-[#00b4d8]/50 focus:border-[#00b4d8] focus:outline-none rounded-xl pl-8 pr-3.5 py-2.5 text-xs sm:text-[13px] font-bold text-white transition-all cursor-pointer text-left truncate shadow-inner flex items-center justify-between"
               >
-                {/* 1st on the list: All Buildings in Nearby Metro */}
-                <option value="all_buildings" className="bg-[#161426] text-[#00b4d8] font-extrabold py-1.5">
-                  🏢 All Buildings in Nearby Metro ({totalDistrictBusinessesInBuildings} businesses • {areaBuildings.length} towers)
-                </option>
+                <div className="flex items-center gap-2 truncate">
+                  <Building2 className="w-3.5 h-3.5 text-[#00b4d8] shrink-0" />
+                  <span className="truncate">
+                    {selectedBuildingName === 'all_buildings'
+                      ? `All Buildings (${areaBuildings.length} towers)`
+                      : selectedBuildingName}
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[#8e8aab] shrink-0 transition-transform ${isBuildingDropdownOpen ? 'rotate-180 text-[#00b4d8]' : ''}`} />
+              </button>
 
-                {/* Next: Each individual building with its business count */}
-                <optgroup
-                  label={`🏢 Nearby Towers at ${parsedCurrentStation.displayName} (${areaBuildings.length})`}
-                  className="bg-[#161426] text-white"
-                >
-                  {areaBuildings.map((b) => (
-                    <option key={b.buildingName} value={b.buildingName} className="bg-[#161426] text-white py-1">
-                      {b.buildingName} ({b.indoorBusinesses?.length || b.totalCompaniesCount} businesses • {b.distanceFromMetro || b.metroExit})
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
+              {/* Custom Dropdown Popover */}
+              {isBuildingDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#161426] border border-[#2d284a] rounded-2xl shadow-2xl p-2 flex flex-col gap-1.5 backdrop-blur-xl">
+                  {/* Quick Search */}
+                  <div className="relative flex items-center px-2.5 py-1.5 bg-[#0d0b1a] rounded-xl border border-[#26223d]">
+                    <Search className="w-3.5 h-3.5 text-[#8e8aab] shrink-0 mr-2" />
+                    <input
+                      type="text"
+                      value={buildingSearchQuery}
+                      onChange={(e) => setBuildingSearchQuery(e.target.value)}
+                      placeholder="Filter building..."
+                      className="w-full bg-transparent text-xs text-white placeholder-[#8e8aab] outline-none font-medium"
+                      autoFocus
+                    />
+                    {buildingSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setBuildingSearchQuery('')}
+                        className="text-[#8e8aab] hover:text-white p-0.5 ml-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#8e8aab]">
-                <ChevronDown className="w-4 h-4" />
-              </div>
+                  {/* Scrollable Items Container (Max 220px high) */}
+                  <div className="max-h-56 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {/* All Buildings Option */}
+                    {(!buildingSearchQuery || 'all buildings'.includes(buildingSearchQuery.toLowerCase())) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBuildingName('all_buildings');
+                          setIsBuildingDropdownOpen(false);
+                          setBuildingSearchQuery('');
+                        }}
+                        className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-between ${
+                          selectedBuildingName === 'all_buildings'
+                            ? 'bg-[#00b4d8]/20 text-[#00b4d8] border border-[#00b4d8]/40'
+                            : 'text-[#00b4d8] hover:bg-[#201c3b]'
+                        }`}
+                      >
+                        <span>All Buildings ({areaBuildings.length} towers)</span>
+                        {selectedBuildingName === 'all_buildings' && <Check className="w-3.5 h-3.5 text-[#00b4d8]" />}
+                      </button>
+                    )}
+
+                    {/* Individual Buildings */}
+                    {filteredAreaBuildings.map((b) => {
+                      const isSelected = selectedBuildingName === b.buildingName;
+                      return (
+                        <button
+                          key={b.buildingName}
+                          type="button"
+                          onClick={() => {
+                            setSelectedBuildingName(b.buildingName);
+                            setIsBuildingDropdownOpen(false);
+                            setBuildingSearchQuery('');
+                          }}
+                          className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-[#00b4d8]/20 text-white font-bold border border-[#00b4d8]/40'
+                              : 'text-[#d4d1e8] hover:bg-[#201c3b] hover:text-white'
+                          }`}
+                        >
+                          <span className="truncate">{b.buildingName}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#00b4d8] shrink-0 ml-2" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Auto-Target Best Building Button */}
@@ -1392,15 +1587,6 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsFilterSheetOpen(true)}
-            className="h-8 px-3.5 rounded-full text-[13px] font-semibold text-white bg-[#161426] border border-[#27233e] hover:bg-[#1f1c35] transition-colors flex items-center gap-1.5"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#8e8aab]" />
-            <span>Filter</span>
-          </button>
-
           {/* List / Map Switch */}
           <div className="flex items-center bg-[#110f22] border border-[#26223d] p-0.5 rounded-full text-[12px]">
             <button
@@ -1780,19 +1966,6 @@ export const App1MapScout: React.FC<App1MapScoutProps> = ({
         isOpen={isGisModalOpen}
         onClose={() => setIsGisModalOpen(false)}
         onSelectCoTenant={handleSelectCoTenant}
-      />
-
-      {/* Mobile Filter Sheet */}
-      <MobileFilterSheet
-        isOpen={isFilterSheetOpen}
-        onClose={() => setIsFilterSheetOpen(false)}
-        district={district}
-        setDistrict={setDistrict}
-        reviewFilter={reviewFilter}
-        setReviewFilter={setReviewFilter}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        onApply={() => fetchBusinesses(district, category)}
       />
     </div>
   );
