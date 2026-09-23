@@ -33,6 +33,7 @@ import {
   buildDirectReviewUrl,
   buildGoogleReviewUrl,
   hexPairToPlaceIdBrowser,
+  resolveGooglePlaceIdFromInput,
 } from '../utils/googlePlaceIdUtils';
 import {
   collateTargetCompanies,
@@ -131,6 +132,38 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
   };
 
+  const [detectedClipboardUrl, setDetectedClipboardUrl] = useState<string | null>(null);
+
+  // Auto-check clipboard when window regains focus (e.g., returning from View Maps)
+  useEffect(() => {
+    const handleFocus = async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          const clean = text.trim();
+          if (
+            clean &&
+            (clean.includes('maps.app.goo.gl') ||
+              clean.includes('goo.gl/maps') ||
+              clean.includes('google.com/maps') ||
+              clean.includes('search.google.com') ||
+              clean.includes('placeid=') ||
+              clean.match(/ChIJ[a-zA-Z0-9_-]{23,}/)) &&
+            clean !== mapShareLinkInput &&
+            clean !== mapLinkInput
+          ) {
+            setDetectedClipboardUrl(clean);
+          }
+        }
+      } catch {
+        // Ignore clipboard permission issues
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [mapShareLinkInput, mapLinkInput]);
+
   const captureClipboardLink = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -138,19 +171,69 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
       if (clean) {
         setMapShareLinkInput(clean);
         setGoogleInputTab('share');
-        setPlaceId(null);
-        setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
-        setSuccessBanner("Successfully captured Google Maps link from clipboard!");
+        setDetectedClipboardUrl(null);
+        setSuccessBanner("📋 Captured link from clipboard! Resolving Place ID...");
         
         // Auto-run resolution
         setTimeout(() => {
           processGoogleMapLink(clean);
         }, 50);
       } else {
-        setFetchError("Clipboard is empty. Please copy a link first!");
+        setFetchError("Clipboard is empty. Please copy a Google Maps link first!");
       }
     } catch (err) {
       setFetchError("Please allow clipboard permissions or paste the link manually.");
+    }
+  };
+
+  // Primary 1-Click Action: Capture from Clipboard & Resolve Place ID immediately
+  const handleCaptureAndResolve = async () => {
+    setIsAnalyzing(true);
+    setFetchError('');
+    try {
+      let targetLink = mapShareLinkInput.trim() || mapLinkInput.trim();
+
+      // Attempt to read from clipboard if available
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          const clean = text.trim();
+          if (
+            clean &&
+            (clean.includes('http') ||
+              clean.includes('maps') ||
+              clean.includes('goo.gl') ||
+              clean.includes('ChIJ') ||
+              clean.includes('0x'))
+          ) {
+            targetLink = clean;
+            setMapShareLinkInput(clean);
+            setGoogleInputTab('share');
+            setDetectedClipboardUrl(null);
+          }
+        }
+      } catch {
+        // Clipboard read permission skipped
+      }
+
+      if (!targetLink) {
+        targetLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${businessName} ${district} Dubai`)}`;
+      }
+
+      const result = await resolveGooglePlaceIdFromInput(targetLink, businessName, district);
+      if (result.placeId && isValidPlaceId(result.placeId)) {
+        setPlaceId(result.placeId);
+        setGeneratedReviewUrl(result.reviewUrl);
+        setSuccessBanner(`✓ Place ID Resolved (${result.placeId}) → Direct Google 5-Star Review URL Ready!`);
+      } else {
+        const fallbackUrl = buildGoogleReviewUrl(businessName, district, null);
+        setGeneratedReviewUrl(fallbackUrl);
+        setSuccessBanner(`✓ Generated Review URL for "${businessName}"`);
+      }
+    } catch (err: any) {
+      setFetchError(err.message || 'Failed to resolve Place ID');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -244,111 +327,23 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
     setIsAnalyzing(true);
     setFetchError('');
 
-    // RESET STATE IMMEDIATELY BEFORE RESOLVING TO AVOID STALE STATE
-    setPlaceId(null);
-    setGeneratedReviewUrl(null);
-
     try {
-      const rawUrl = url.trim();
-      let resolvedPlaceId: string | null = null;
+      const result = await resolveGooglePlaceIdFromInput(url, businessName, district);
 
-      // 1. Check for placeid= query parameter
-      const placeIdMatch = rawUrl.match(/placeid=([a-zA-Z0-9_-]+)/);
-      if (placeIdMatch && placeIdMatch[1] && isValidPlaceId(placeIdMatch[1])) {
-        resolvedPlaceId = placeIdMatch[1];
-      }
-
-      // 2. Check for explicit ChIJ Place ID anywhere in URL
-      if (!resolvedPlaceId) {
-        const chijMatch = rawUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
-        if (chijMatch && chijMatch[1] && isValidPlaceId(chijMatch[1])) {
-          resolvedPlaceId = chijMatch[1];
-        }
-      }
-
-      // 3. Check for 64-bit Hex Feature ID pair (0x...:0x...) anywhere in URL
-      if (!resolvedPlaceId) {
-        const hexMatch = rawUrl.match(/(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
-        if (hexMatch && hexMatch[1] && hexMatch[2]) {
-          const derived = hexPairToPlaceIdBrowser(hexMatch[1], hexMatch[2]);
-          if (derived && isValidPlaceId(derived)) {
-            resolvedPlaceId = derived;
-          }
-        }
-      }
-
-      // 4. Extract business name from URL path if available
-      const placeNameMatch = rawUrl.match(/\/maps\/place\/([^/@?]+)/);
-      if (placeNameMatch && placeNameMatch[1]) {
-        const nameFromUrl = decodeURIComponent(placeNameMatch[1].replace(/\+/g, ' '));
-        if (nameFromUrl && nameFromUrl.length > 2 && !businessName) {
-          setBusinessName(nameFromUrl);
-        }
-      }
-
-      // 5. Query server backend endpoint (works locally, in Cloud Run, and on Vercel)
-      if (!resolvedPlaceId) {
-        const response = await fetch('/api/extract-review-link', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: rawUrl, businessName, district }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.placeId && isValidPlaceId(data.placeId)) {
-            resolvedPlaceId = data.placeId;
-          } else if (data.reviewUrl) {
-            const backendPlaceIdMatch = data.reviewUrl.match(/placeid=([a-zA-Z0-9_-]+)/) || data.reviewUrl.match(/(ChIJ[a-zA-Z0-9_-]{23,})/);
-            if (backendPlaceIdMatch && backendPlaceIdMatch[1] && isValidPlaceId(backendPlaceIdMatch[1])) {
-              resolvedPlaceId = backendPlaceIdMatch[1];
-            }
-          }
-        }
-      }
-
-      // Verify that the Place ID belongs to the CURRENT business
-      // If it contains "AlSafadi" or is Al Safadi's ID, check if current businessName contains "safadi"
-      if (resolvedPlaceId) {
-        const isAlSafadiId = resolvedPlaceId.includes('AlSafadi') || resolvedPlaceId === 'ChIJ8_DXB_AlSafadiRigga';
-        const nameContainsSafadi = businessName.toLowerCase().includes('safadi');
-        if (isAlSafadiId && !nameContainsSafadi) {
-          // It does not belong to the current business! Mismatched!
-          resolvedPlaceId = null;
-        }
-      }
-
-      // Update state based on resolved value
-      if (resolvedPlaceId && isValidPlaceId(resolvedPlaceId)) {
-        setPlaceId(resolvedPlaceId);
-        const reviewUrl = buildDirectReviewUrl(resolvedPlaceId);
-        setGeneratedReviewUrl(reviewUrl);
-
-        console.log(
-          `[REVIEW GENERATOR]\n\n` +
-          `Current Business: ${businessName}\n` +
-          `Current Address: ${district}\n` +
-          `Current Google Maps URL: ${rawUrl}\n` +
-          `Resolved Place ID: ${resolvedPlaceId}\n` +
-          `Generated Review URL: ${reviewUrl}\n`
-        );
+      if (result.placeId && isValidPlaceId(result.placeId)) {
+        setPlaceId(result.placeId);
+        setGeneratedReviewUrl(result.reviewUrl);
+        setSuccessBanner(`✓ Captured & Resolved Place ID (${result.placeId}) for "${businessName}"`);
       } else {
         setPlaceId(null);
         const fallbackUrl = buildGoogleReviewUrl(businessName, district, null);
         setGeneratedReviewUrl(fallbackUrl);
-
-        console.log(
-          `[REVIEW GENERATOR]\n\n` +
-          `Current Business: ${businessName}\n` +
-          `Current Address: ${district}\n` +
-          `Current Google Maps URL: ${rawUrl}\n` +
-          `Resolved Place ID: null\n` +
-          `Generated Review URL: ${fallbackUrl} (Using Resilient Fallback Search Link)\n`
-        );
+        setSuccessBanner(`✓ Generated Review URL for "${businessName}"`);
       }
-    } catch (_err) {
+    } catch (err: any) {
       setPlaceId(null);
       setGeneratedReviewUrl(buildGoogleReviewUrl(businessName, district, null));
+      setFetchError(err.message || 'Unable to resolve link');
     } finally {
       setIsAnalyzing(false);
     }
@@ -666,14 +661,48 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
               />
             </div>
 
+            {/* Real-time clipboard banner when returning from Maps */}
+            {detectedClipboardUrl && (
+              <div className="p-3 bg-gradient-to-r from-[#ec1a65]/20 to-[#a822d8]/20 border border-[#ec1a65]/50 rounded-2xl flex items-center justify-between gap-3 animate-pulse">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Clipboard className="w-4 h-4 text-[#ec1a65] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold text-white truncate">
+                      Google Maps Link Detected in Clipboard!
+                    </p>
+                    <p className="text-[10px] text-[#8e8aab] truncate font-mono">
+                      {detectedClipboardUrl}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMapShareLinkInput(detectedClipboardUrl);
+                    setGoogleInputTab('share');
+                    setDetectedClipboardUrl(null);
+                    handleCaptureAndResolve();
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#ec1a65] to-[#a822d8] text-white text-xs font-bold shrink-0 shadow-md hover:scale-105 transition"
+                >
+                  ⚡ Auto-Resolve Place ID
+                </button>
+              </div>
+            )}
+
             {mode === 'google' ? (
-              /* Google Maps Link Box with sub-tabs */
+              /* Google Maps Link Box with sub-tabs & 1-Click Auto-Capture */
               <div className="min-w-0 flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <label className="block text-[11px] font-semibold text-[#8e8aab]">
-                    Google Maps Connection URL
-                  </label>
-                  
+                  <div>
+                    <label className="block text-[11px] font-semibold text-white">
+                      Google Maps Link & Share URL
+                    </label>
+                    <span className="text-[10px] text-[#8e8aab]">
+                      Click "View on Maps" → Copy link in Maps → Press "Capture & Resolve Place ID"
+                    </span>
+                  </div>
+
                   {/* Tab Selector */}
                   <div className="flex items-center gap-1 bg-[#110f22]/80 p-0.5 rounded-lg border border-[#26223d]">
                     <button
@@ -732,39 +761,6 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   </div>
                 )}
 
-                {/* Guided Share Link Capture Helper */}
-                {mapLinkInput && (
-                  <div className="bg-[#110f22]/60 border border-[#26223d]/40 rounded-xl p-3 text-xs text-[#8e8aab] flex flex-col gap-2 mt-1">
-                    <p className="leading-relaxed">
-                      💡 <strong>Super Fast One-Tap Capture Workflow:</strong>
-                    </p>
-                    <ol className="list-decimal pl-4 space-y-1 text-[11px]">
-                      <li>Click <strong>1. Open on Google Maps</strong> below.</li>
-                      <li>On Google Maps, click <strong>Share</strong> and then click <strong>Copy link</strong>.</li>
-                      <li>Return here and click <strong>2. One-Tap Capture & Generate</strong> to instantly grab and resolve it!</li>
-                    </ol>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => window.open(mapLinkInput, '_blank', 'noopener,noreferrer')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00b4d8]/20 hover:bg-[#00b4d8]/30 text-white border border-[#00b4d8]/40 text-[11px] font-bold transition-all"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-[#00b4d8]" />
-                        <span>1. Open on Google Maps</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={captureClipboardLink}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ec1a65]/20 hover:bg-[#ec1a65]/30 text-white border border-[#ec1a65]/40 text-[11px] font-bold transition-all animate-pulse hover:animate-none"
-                      >
-                        <Clipboard className="w-3.5 h-3.5 text-[#ec1a65]" />
-                        <span>2. One-Tap Capture & Generate</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {fetchError && (
                   <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -772,17 +768,29 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   </p>
                 )}
 
-                <div className="mt-1 flex items-center gap-2">
+                {/* Primary Action Row */}
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
                   <button
-                    onClick={() => {
-                      const targetLink = mapShareLinkInput.trim() || mapLinkInput.trim();
-                      processGoogleMapLink(targetLink);
-                    }}
-                    disabled={isAnalyzing || !(mapShareLinkInput.trim() || mapLinkInput.trim())}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-semibold transition border border-[#26223d] disabled:opacity-40"
+                    type="button"
+                    onClick={handleCaptureAndResolve}
+                    disabled={isAnalyzing}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ec1a65] to-[#a822d8] hover:opacity-90 text-white text-xs font-bold transition shadow-lg shadow-[#ec1a65]/20 disabled:opacity-40"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-[#ec1a65] shrink-0" />
-                    <span>{isAnalyzing ? 'Generating Review URL...' : 'Generate Review URL'}</span>
+                    <Sparkles className="w-3.5 h-3.5 text-white shrink-0 animate-spin-slow" />
+                    <span>{isAnalyzing ? 'Resolving Place ID...' : '⚡ Capture & Resolve Place ID'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetUrl = mapLinkInput || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${businessName} ${district} Dubai`)}`;
+                      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                      setSuccessBanner(`Opened "${businessName}" on Google Maps. Copy the share link and return here!`);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-[#00b4d8] hover:text-white text-xs font-semibold border border-[#00b4d8]/40 hover:border-[#00b4d8] transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-[#00b4d8]" />
+                    <span>View on Maps ↗</span>
                   </button>
                 </div>
               </div>
@@ -867,14 +875,14 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
               )}
             </div>
 
-            {/* Action buttons: Copy, Test Link, and HAND-OFF TO NFC TOOL */}
+            {/* Action buttons: Copy, Test, Add to Plan, and Burn NFC Card */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <button
                 onClick={() =>
                   copyUrl(mode === 'google' ? generatedReviewUrl : generatedInstagramUrl)
                 }
                 disabled={mode === 'google' && !generatedReviewUrl}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-medium border border-[#26223d] transition disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-medium border border-[#26223d] transition disabled:opacity-40"
               >
                 {copied ? (
                   <>
@@ -883,7 +891,7 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-3.5 h-3.5 text-[#8e8aab]" />
                     <span>Copy Link</span>
                   </>
                 )}
@@ -898,42 +906,44 @@ export const App2ProductMate: React.FC<App2ProductMateProps> = ({
                   }
                 }}
                 disabled={mode === 'google' ? !generatedReviewUrl : !generatedInstagramUrl}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-medium border border-[#26223d] transition hover:border-[#00b4d8]/50 disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#110f22] hover:bg-[#1a172e] text-white text-xs font-medium border border-[#26223d] transition hover:border-[#00b4d8]/50 disabled:opacity-40"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-[#00b4d8]" />
-                <span>Test in Browser</span>
+                <span>Test Link</span>
               </button>
 
+              {/* Product Mate Link: https://productmate.com/google-review-link-generator */}
               <a
-                id="btn-productmate-action"
                 href="https://productmate.com/google-review-link-generator"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#110f22] hover:bg-[#1a172e] text-[#ff5c8a] hover:text-white text-xs font-semibold border border-[#ec1a65]/40 transition"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#161329] hover:bg-[#201c3b] text-[#34d399] text-xs font-semibold border border-[#059669]/40 hover:border-[#059669] transition shadow-sm"
+                title="Open Product Mate Google Review Link Generator"
               >
-                <ExternalLink className="w-3.5 h-3.5 text-[#ec1a65]" />
-                <span>ProductMate Link Generator</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[#34d399]" />
+                <span>Product Mate Link</span>
               </a>
 
-              {/* Add Current Lead to Collated Batch */}
+              {/* Add Current Lead to Visit Plan */}
               <button
                 type="button"
                 onClick={handleAddCurrentToCollation}
                 disabled={mode === 'google' && !generatedReviewUrl}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#381423] hover:bg-[#4d1c31] text-[#ff5c8a] border border-[#ec1a65]/40 text-xs font-bold transition shadow-sm disabled:opacity-40"
-                title="Add current business to the collated customer list"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1a172e] hover:bg-[#252042] text-[#ff5c8a] border border-[#ec1a65]/30 text-xs font-semibold transition disabled:opacity-40"
+                title="Add current business to the field visit plan"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Add to Collated Batch</span>
+                <span>+ Add to Visit Plan</span>
               </button>
 
-              {/* PRIMARY ACTION: SEND TO APP 3 */}
+              {/* PRIMARY ACTION: BURN NFC CARD IN TAB 3 */}
               <button
                 onClick={handleTransferToNfc}
                 disabled={mode === 'google' && !generatedReviewUrl}
-                className="w-full sm:w-auto flex-1 min-w-[180px] flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#00a8f3] hover:opacity-95 text-white font-bold text-xs transition shadow-lg shadow-[#ec1a65]/25 disabled:opacity-40"
+                className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#ec1a65] via-[#a822d8] to-[#00b4d8] hover:opacity-95 text-white font-bold text-xs transition shadow-lg shadow-[#ec1a65]/25 disabled:opacity-40"
               >
-                <span>Send to NFC Tool (App 3)</span>
+                <Radio className="w-4 h-4 shrink-0 text-white" />
+                <span>Burn NFC Card in Tab 3</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
             </div>

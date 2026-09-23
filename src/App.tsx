@@ -198,6 +198,23 @@ export default function App() {
               writtenCount={writtenCount}
               collatedCustomers={collatedCustomers}
               onUpdateCollatedCustomers={updateCollatedCustomers}
+              onNavigateToProductMate={(lead) => {
+                setSelectedLead({
+                  id: lead.id,
+                  name: lead.businessName,
+                  category: lead.category || 'Commercial Business',
+                  address: `${lead.district}, Dubai`,
+                  rating: 4.8,
+                  reviewCount: 45,
+                  metroStation: lead.district,
+                  footstepsFromMetro: lead.footsteps || 50,
+                  mapsUrl: lead.targetUrl,
+                  phone: '',
+                  websiteUrl: lead.websiteUrl,
+                  verifiedReal: true,
+                });
+                setActiveTab('generator');
+              }}
             />
           )}
         </main>

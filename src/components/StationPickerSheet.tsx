@@ -13,6 +13,23 @@ interface StationPickerSheetProps {
 }
 
 export const parseStationInfo = (stationString: string) => {
+  if (
+    !stationString ||
+    stationString.toLowerCase().includes('all metro') ||
+    stationString.toLowerCase() === 'all' ||
+    stationString.toLowerCase() === 'all stations' ||
+    stationString.toLowerCase().includes('all dubai')
+  ) {
+    return {
+      displayName: 'All Metro Stations',
+      lineLabel: 'Red & Green Transit Network',
+      area: 'All 48 Stations across Dubai',
+      isRed: true,
+      isGreen: true,
+      isInterchange: true,
+    };
+  }
+
   const isRed = stationString.includes('Red Line') || stationString.includes('Red & Green');
   const isGreen = stationString.includes('Green Line') || stationString.includes('Red & Green');
   const isInterchange = stationString.includes('Interchange');
@@ -159,6 +176,37 @@ export const StationPickerSheet: React.FC<StationPickerSheetProps> = ({
 
         {/* Station List */}
         <div className="flex-1 overflow-y-auto divide-y divide-[#1e1a33] px-3">
+          {(!searchQuery || 'all metro stations'.includes(searchQuery.toLowerCase())) && filterLine === 'all' && (
+            <button
+              type="button"
+              onClick={() => {
+                onSelectStation('All Metro Stations');
+                onClose();
+              }}
+              className={`w-full py-3 px-3 text-left flex items-center justify-between gap-3 hover:bg-[#1a172e] rounded-xl transition-colors mb-1.5 ${
+                selectedStation.toLowerCase().includes('all') ? 'bg-[#25111f] border border-[#ec1a65]/40' : 'bg-[#110f22]/70 border border-[#26223d]'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-[#ff3366] to-[#10b981] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-md">
+                  🚇
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[14px] font-extrabold text-white tracking-tight truncate leading-tight">
+                    All Metro Stations (Red & Green Network)
+                  </div>
+                  <div className="text-[12px] text-[#00b4d8] truncate leading-tight mt-0.5 font-semibold">
+                    Complete Dubai Metro Network · All 48 Stations
+                  </div>
+                </div>
+              </div>
+
+              {selectedStation.toLowerCase().includes('all') && (
+                <Check className="w-4 h-4 text-[#ff5c8a] shrink-0" />
+              )}
+            </button>
+          )}
+
           {filteredStations.map((station) => {
             const isSelected = selectedStation === station;
             const info = parseStationInfo(station);

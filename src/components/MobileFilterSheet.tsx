@@ -72,6 +72,9 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
                 onChange={(e) => setDistrict(e.target.value)}
                 className="w-full h-11 bg-[#110f22] border border-[#26223d] focus:border-[#ec1a65] focus:outline-none rounded-full px-4 text-[14px] text-white appearance-none"
               >
+                <option value="All Metro Stations" className="bg-[#161426] text-[#00b4d8] font-bold">
+                  🚇 All Metro Stations (48 Stations • Red & Green)
+                </option>
                 <optgroup label="DUBAI METRO STATIONS" className="bg-[#161426] text-white">
                   {DUBAI_METRO_STATIONS.map((d) => {
                     const info = parseStationInfo(d);

@@ -187,6 +187,311 @@ export const KNOWN_BUILDINGS_BY_DISTRICT: Record<string, KnownBuildingTemplate[]
       ],
     },
     {
+      name: 'Building 52 A Al Khubaise',
+      arabicName: 'بناية 52 أ الخبيصي التجارية',
+      floors: 5,
+      makaniPrefix: '31422',
+      metroStation: 'Al Rigga (Red Line)',
+      metroExit: 'Exit 1 (Next to Al Zarooni / Al Khubaise Corridor)',
+      distanceFromMetro: '35m from Al Rigga Metro Exit 1 (Next to Al Zarooni)',
+      lat: 25.2638,
+      lng: 55.3244,
+      entranceNames: [
+        'Main Concourse Entrance (Building 52A)',
+        'Side Commercial Arcade (Al Zarooni Walkway)',
+        'Rear Service & Parking Gate',
+      ],
+      doorTypes: ['main_glass_door', 'side_entrance', 'service_door'],
+      curatedCompanies: [
+        {
+          name: 'Al Khubaise Express Typing & Document Clearing',
+          category: 'Corporate Services',
+          floor: 'Ground Floor',
+          floorNumber: 0,
+          unitNumber: 'Shop G-01',
+          openingTime: '08:00 AM',
+          closingTime: '08:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.6,
+          reviewCount: 17,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Al Zarooni & Al Khubaise Legal Consultancy',
+          category: 'Corporate Services',
+          floor: '1st Floor',
+          floorNumber: 1,
+          unitNumber: 'Suite 101',
+          openingTime: '08:30 AM',
+          closingTime: '06:00 PM',
+          daysOpen: 'Mon - Fri',
+          rating: 4.8,
+          reviewCount: 14,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Elite Scissors Gents Grooming Lounge',
+          category: "Men's Barbershops & Gents Salons",
+          floor: 'Ground Floor',
+          floorNumber: 0,
+          unitNumber: 'Shop G-02',
+          openingTime: '09:00 AM',
+          closingTime: '11:30 PM',
+          daysOpen: 'Daily',
+          rating: 4.7,
+          reviewCount: 33,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Deira Pearl Dental & Orthodontic Clinic',
+          category: 'Dental Clinic',
+          floor: '2nd Floor',
+          floorNumber: 2,
+          unitNumber: 'Suite 201',
+          openingTime: '09:00 AM',
+          closingTime: '09:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.9,
+          reviewCount: 22,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Al Khabaisi Community Pharmacy 24/7',
+          category: 'Pharmacy & Health',
+          floor: 'Ground Floor',
+          floorNumber: 0,
+          unitNumber: 'Shop G-03',
+          openingTime: '24 Hours',
+          closingTime: '24 Hours',
+          daysOpen: 'Daily',
+          rating: 4.5,
+          reviewCount: 46,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Al Khubaise Executive Business Center',
+          category: 'Corporate Services',
+          floor: '3rd Floor',
+          floorNumber: 3,
+          unitNumber: 'Suite 301',
+          openingTime: '08:00 AM',
+          closingTime: '07:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.4,
+          reviewCount: 19,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Gulf Stream Cargo & Freight Forwarding LLC',
+          category: 'Logistics & Cargo',
+          floor: '4th Floor',
+          floorNumber: 4,
+          unitNumber: 'Suite 402',
+          openingTime: '08:30 AM',
+          closingTime: '06:30 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.3,
+          reviewCount: 12,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Rose Petals Ladies Salon & Spa',
+          category: 'Ladies Salons & Spas',
+          floor: 'Mezzanine Floor',
+          floorNumber: 0.5,
+          unitNumber: 'M-01',
+          openingTime: '10:00 AM',
+          closingTime: '10:00 PM',
+          daysOpen: 'Daily',
+          rating: 4.8,
+          reviewCount: 28,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Skyline Horizons Real Estate & Asset Management',
+          category: 'Real Estate',
+          floor: '1st Floor',
+          floorNumber: 1,
+          unitNumber: 'Suite 103',
+          openingTime: '09:00 AM',
+          closingTime: '06:00 PM',
+          daysOpen: 'Mon - Fri',
+          rating: 4.5,
+          reviewCount: 16,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Al Khubaise Specialty Coffee & Artisan Bakery',
+          category: 'Cafes',
+          floor: 'Ground Floor',
+          floorNumber: 0,
+          unitNumber: 'Shop G-04',
+          openingTime: '07:00 AM',
+          closingTime: '11:00 PM',
+          daysOpen: 'Daily',
+          rating: 4.7,
+          reviewCount: 39,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Orient Express Travel & Tourism Services',
+          category: 'Travel Agency',
+          floor: '2nd Floor',
+          floorNumber: 2,
+          unitNumber: 'Suite 203',
+          openingTime: '09:00 AM',
+          closingTime: '08:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.2,
+          reviewCount: 21,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Future Wave IT Solutions & Software Development',
+          category: 'Technology & Software',
+          floor: '3rd Floor',
+          floorNumber: 3,
+          unitNumber: 'Suite 304',
+          openingTime: '09:00 AM',
+          closingTime: '06:00 PM',
+          daysOpen: 'Mon - Fri',
+          rating: 4.9,
+          reviewCount: 15,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Dr. Farooq Specialist Medical Clinic',
+          category: 'Clinics & Healthcare',
+          floor: '2nd Floor',
+          floorNumber: 2,
+          unitNumber: 'Suite 205',
+          openingTime: '09:00 AM',
+          closingTime: '08:30 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.8,
+          reviewCount: 34,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Precision Auto Parts & Technical Supplies',
+          category: 'Automotive',
+          floor: 'Ground Floor',
+          floorNumber: 0,
+          unitNumber: 'Shop G-05',
+          openingTime: '08:30 AM',
+          closingTime: '08:30 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.4,
+          reviewCount: 27,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Apex Chartered Tax & Auditing Consultants',
+          category: 'Accounting & Auditing',
+          floor: '4th Floor',
+          floorNumber: 4,
+          unitNumber: 'Suite 404',
+          openingTime: '08:30 AM',
+          closingTime: '05:30 PM',
+          daysOpen: 'Mon - Fri',
+          rating: 4.6,
+          reviewCount: 11,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Silver Star General Trading LLC',
+          category: 'General Trading',
+          floor: '1st Floor',
+          floorNumber: 1,
+          unitNumber: 'Suite 105',
+          openingTime: '09:00 AM',
+          closingTime: '06:30 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.3,
+          reviewCount: 18,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Golden Pixel Digital Marketing & Advertising',
+          category: 'Marketing & Media',
+          floor: '3rd Floor',
+          floorNumber: 3,
+          unitNumber: 'Suite 306',
+          openingTime: '09:00 AM',
+          closingTime: '06:00 PM',
+          daysOpen: 'Mon - Fri',
+          rating: 4.7,
+          reviewCount: 13,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Vision Care Optics & Contact Lenses',
+          category: 'Retail & Boutiques',
+          floor: 'Ground Floor',
+          floorNumber: 0,
+          unitNumber: 'Shop G-06',
+          openingTime: '09:30 AM',
+          closingTime: '10:30 PM',
+          daysOpen: 'Daily',
+          rating: 4.5,
+          reviewCount: 25,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Royal Cut Tailoring & Custom Garments',
+          category: 'Tailoring & Fashion',
+          floor: 'Mezzanine Floor',
+          floorNumber: 0.5,
+          unitNumber: 'M-03',
+          openingTime: '10:00 AM',
+          closingTime: '10:00 PM',
+          daysOpen: 'Daily',
+          rating: 4.6,
+          reviewCount: 31,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Global Facilities & Security Management LLC',
+          category: 'Facility Management',
+          floor: '4th Floor',
+          floorNumber: 4,
+          unitNumber: 'Suite 406',
+          openingTime: '08:00 AM',
+          closingTime: '06:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.4,
+          reviewCount: 9,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Emirates Falcon Certified Translation Center',
+          category: 'Corporate Services',
+          floor: '1st Floor',
+          floorNumber: 1,
+          unitNumber: 'Suite 106',
+          openingTime: '08:30 AM',
+          closingTime: '07:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.7,
+          reviewCount: 20,
+          pitchOpportunity: 'high',
+        },
+        {
+          name: 'Vitality Physiotherapy & Rehab Clinic',
+          category: 'Clinics & Healthcare',
+          floor: '2nd Floor',
+          floorNumber: 2,
+          unitNumber: 'Suite 207',
+          openingTime: '09:00 AM',
+          closingTime: '08:00 PM',
+          daysOpen: 'Mon - Sat',
+          rating: 4.9,
+          reviewCount: 23,
+          pitchOpportunity: 'high',
+        },
+      ],
+    },
+    {
       name: 'Ibrahim Al Khaja Commercial Building',
       arabicName: 'بناية إبراهيم الخاجة التجارية',
       floors: 6,
@@ -1575,16 +1880,35 @@ export function getBuildingsForMetroStation(stationName: string): GisBuildingInf
   const clean = (stationName || '').toLowerCase();
   let templates: KnownBuildingTemplate[] = [];
 
+  // All Metro Stations - Combined commercial towers across all hubs
+  if (clean.includes('all metro') || clean.includes('all station') || clean.includes('all dubai') || clean === 'all') {
+    templates = [
+      ...KNOWN_BUILDINGS_BY_DISTRICT.rigga,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.dcc,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.union,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.salah_al_din,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.burjuman,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.business_bay,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.marina,
+      ...KNOWN_BUILDINGS_BY_DISTRICT.baniyas,
+    ];
+  }
   // DCC / Deira City Centre - Red Line (Port Saeed)
-  if (clean.includes('dcc') || clean.includes('city centre') || clean.includes('city center')) {
+  else if (clean.includes('dcc') || clean.includes('city centre') || clean.includes('city center')) {
     templates = KNOWN_BUILDINGS_BY_DISTRICT.dcc;
   }
   // Union Metro Interchange - Red & Green Line
   else if (clean.includes('union')) {
     templates = KNOWN_BUILDINGS_BY_DISTRICT.union;
   }
-  // Al Rigga Corridor - Red Line
-  else if (clean.includes('rigga')) {
+  // Al Rigga & Al Khubaise / Al Khabeesi Corridor - Red & Green Line Connectors
+  else if (
+    clean.includes('rigga') ||
+    clean.includes('khubaise') ||
+    clean.includes('khabeesi') ||
+    clean.includes('khabaisi') ||
+    clean.includes('abu baker')
+  ) {
     templates = KNOWN_BUILDINGS_BY_DISTRICT.rigga;
   }
   // Salah Al Din - Green Line (Reef Mall & Muraqqabat)
@@ -1645,7 +1969,16 @@ export function generateGisBuildingData(lead: BusinessLead): GisBuildingInfo {
     districtCategory = 'marina';
   } else if (dLower.includes('burjuman') || aLower.includes('burjuman')) {
     districtCategory = 'burjuman';
-  } else if (dLower.includes('rigga') || aLower.includes('rigga')) {
+  } else if (
+    dLower.includes('rigga') ||
+    aLower.includes('rigga') ||
+    dLower.includes('khubaise') ||
+    aLower.includes('khubaise') ||
+    dLower.includes('khabeesi') ||
+    aLower.includes('khabeesi') ||
+    dLower.includes('abu baker') ||
+    aLower.includes('abu baker')
+  ) {
     districtCategory = 'rigga';
   }
 

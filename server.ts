@@ -672,7 +672,15 @@ function getFilteredRealBusinesses(
 
   // 1. Filter by District / Target Area
   let districtMatches = allBusinesses;
-  if (district && district !== "All Dubai") {
+  const isAllMetro =
+    !district ||
+    district === "All Dubai" ||
+    district === "All Metro Stations" ||
+    district === "All Metro" ||
+    district.toLowerCase().includes("all metro") ||
+    district.toLowerCase() === "all";
+
+  if (!isAllMetro && district) {
     const cleanD = district.toLowerCase().replace(/\(.*?\)/g, "").replace(/metro/g, "").trim();
 
     // Specific corridor flags
@@ -805,7 +813,13 @@ function getFilteredRealBusinesses(
 
   // 2. Filter by Category strictly
   let categoryMatches = districtMatches;
-  if (category && category !== "All Categories") {
+  if (
+    category &&
+    category !== "All Categories" &&
+    category !== "All" &&
+    category !== "all" &&
+    category.toLowerCase() !== "all"
+  ) {
     const cLower = category.toLowerCase().trim();
     categoryMatches = districtMatches.filter(b => {
       const bCatLower = b.category.toLowerCase().trim();
@@ -1291,7 +1305,7 @@ function isValidPlaceId(placeId: unknown): placeId is string {
 
 // API: Extract & Convert Google Map link or Business Name to Direct Review URL (Product Mate)
 // ZERO-BILLING, ZERO-API-KEY: Uses underlying Google Maps URL / Feature IDs directly
-app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps-url"], async (req, res) => {
+app.post(["/api/extract-review-link", "/extract-review-link", "/api/resolve-maps-url", "/api/resolve-place-id", "/resolve-place-id"], async (req, res) => {
   try {
     const { url, businessName, placeId: providedPlaceId, district } = req.body;
     let mapsUrl = (url || "").trim();

@@ -90,6 +90,15 @@ export const DUBAI_METRO_STATIONS = Array.from(
 );
 
 export function getCorridorNeighbors(stationName: string): { prev: string; curr: string; next: string; line: 'red' | 'green' | 'interchange' } {
+  if (!stationName || stationName.toLowerCase().includes('all metro') || stationName.toLowerCase() === 'all') {
+    return {
+      prev: 'Red Line Corridor (30 Stops)',
+      curr: 'All Metro Stations (48 Stops)',
+      next: 'Green Line Corridor (18 Stops)',
+      line: 'interchange',
+    };
+  }
+
   // Check red line first
   const redIdx = DUBAI_RED_LINE_SEQUENCE.findIndex(
     (s) => s.toLowerCase().includes(stationName.toLowerCase()) || stationName.toLowerCase().includes(s.toLowerCase().replace(/\(.*?\)/g, '').trim())

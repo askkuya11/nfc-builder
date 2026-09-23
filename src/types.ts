@@ -53,6 +53,13 @@ export interface BusinessLead {
   customContactUpdated?: boolean;
   audit?: GmbAuditData;
   buildingInfo?: GisBuildingInfo;
+  verifiedReal?: boolean;
+  openingTime?: string;
+  closingTime?: string;
+  hoursLabel?: string;
+  daysOpen?: string;
+  isOpenNow?: boolean;
+  closingNotice?: string;
 }
 
 export interface GisBuildingEntrance {
